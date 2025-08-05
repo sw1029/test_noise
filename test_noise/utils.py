@@ -9,4 +9,21 @@
 2. noise 균일화
 3. 이미지의 유사도 비교
 4. 노이즈별 민감도 측정(PSNR RMS, MAE, SSIM과 같은 이미지 왜곡 측정 비율 척도)
+
+종류별 noise 구현
+    Atmospheric noise - 대기 왜곡
+    Radiometric noise - 방사 왜곡
+    Sensor Noise/Defect - 카메라 센서 왜곡
 '''
+
+def compareNoise(img1, img2):
+    pass
+
+def normalize(img, factor = 0.2):
+    pass
+
+def compareSimilarity(img1, img2):
+    pass
+
+def Sensitivity(img):
+    pass
