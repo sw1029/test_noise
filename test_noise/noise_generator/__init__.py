@@ -4,8 +4,8 @@ from .salt_pepper_noise import SaltPepperNoise
 from .vignetting_noise import VignettingNoise
 from .missing_line import MissingLineNoise
 
-gaussian_noise = GaussianNoise.add_noise
-poisson_noise = PoissonNoise.add_noise
-salt_pepper_noise = SaltPepperNoise.add_noise
-vignetting_noise = VignettingNoise.add_noise
-missing_line_noise = MissingLineNoise.add_noise
+gaussianNoise = GaussianNoise.add_noise
+poissonNoise = PoissonNoise.add_noise
+saltPepperNoise = SaltPepperNoise.add_noise
+vignettingNoise = VignettingNoise.add_noise
+missingLineNoise = MissingLineNoise.add_noise
