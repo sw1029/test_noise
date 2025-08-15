@@ -1,0 +1,37 @@
+band:
+  blue :
+    gain : 0.0362
+    offset : -22.1416
+    band_min : 450
+    band_max : 520
+    band_50_min : 445.6
+    band_50_max : 532.3
+    center : 489.0
+    ESUN : 2001
+  green :
+    gain : 0.0249
+    offset : -14.0210
+    band_min : 520
+    band_max : 600
+    band_50_min : 511.9
+    band_50_max : 606.1
+    center : 559.0
+    ESUN : 1875
+  red :
+    gain : 0.0229
+    offset : -13.0457
+    band_min : 630
+    band_max : 690
+    band_50_min : 633.1
+    band_50_max : 702.8
+    center : 668.0
+    ESUN : 1525
+  nir :
+    gain : 0.013
+    offset : -10.2834
+    band_min : 760
+    band_max : 900
+    band_50_min : 756.0
+    band_50_max : 932.2
+    center : 844.1    
+    ESUN : 1027
