@@ -15,3 +15,9 @@ class Noise(ABC):
         init에서 입력받은 이미지에 noise를 추가한 후 반환합니다. 
         """
         pass
+    @staticmethod
+    @abstractmethod
+    def extract_noise(src: np.ndarray, **kwargs) -> np.ndarray:
+        '''
+        입력된 이미지의 보정을 역산하여 순수 noise만 반환합니다.
+        '''
