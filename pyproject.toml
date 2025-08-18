@@ -28,6 +28,8 @@ dependencies = [
     "six",
 ]
 
-[project.urls]
-"Homepage" = "https://github.com/pypa/sampleproject"
-"Bug Tracker" = "https://github.com/pypa/sampleproject/issues"
+[tool.setuptools.packages.find]
+
+where = ["."]
+include = ["test_noise"]      # 이 패키지만 배포
+exclude = ["metadata_sample*"]
