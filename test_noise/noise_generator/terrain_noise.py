@@ -16,10 +16,11 @@ class TerrainNoise(Noise):
                   Minnaert_constant_NIR=0.6,
                   Minnaert_constant_R=0.5,
                   Minnaert_constant_G=0.4,
-                  Minnaert_constant_B=0.3) -> np.ndarray:
+                  Minnaert_constant_B=0.3,
+                  yaml_name="KOMPSAT.yaml") -> np.ndarray:
         
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(current_dir, '..', '..', 'config', 'KOMPSAT.yaml')
+        config_path = os.path.join(current_dir, '..', '..', 'config', yaml_name)
         
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
