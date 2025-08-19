@@ -14,7 +14,10 @@ Ls = H * ρ * T + Lp 에서의 H(total downwelling된 radiance)를 reflectance�
 
 class AtmosphericNoise(Noise):
     @staticmethod
-    def add_noise(src,haze=True, rayleigh=True,yaml_name = 'KOMPSAT.yaml') -> np.ndarray:
+    def add_noise(src,
+                  distance=1000, sun_angle=30,
+                  haze=True, rayleigh=True,
+                  yaml_name = 'KOMPSAT.yaml') -> np.ndarray:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(current_dir, '..', '..', 'config', yaml_name)
 
@@ -25,12 +28,19 @@ class AtmosphericNoise(Noise):
 
         gain_B = band_params.get('blue', {}).get('gain')
         offset_B = band_params.get('blue', {}).get('offset')
+        ESUN_B = band_params.get('blue', {}).get('ESUN')
+
         gain_G = band_params.get('green', {}).get('gain')
         offset_G = band_params.get('green', {}).get('offset')
+        ESUN_G = band_params.get('green', {}).get('ESUN')
+
         gain_R = band_params.get('red', {}).get('gain')
         offset_R = band_params.get('red', {}).get('offset')
+        ESUN_R = band_params.get('red', {}).get('ESUN')
+
         gain_NIR = band_params.get('nir', {}).get('gain')
         offset_NIR = band_params.get('nir', {}).get('offset')
+        ESUN_NIR = band_params.get('nir', {}).get('ESUN')
 
         rows, cols, channels = src.shape
         atmospheric_noise_image = src.copy()
