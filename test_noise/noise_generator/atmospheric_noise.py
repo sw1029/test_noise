@@ -15,6 +15,7 @@ Ls = H * ρ * T + Lp 에서의 H(total downwelling된 radiance)를 reflectance�
 class AtmosphericNoise(Noise):
     @staticmethod
     def add_noise(src,
+                  factor=0.1,
                   haze=True, rayleigh=True,
                   yaml_name='KOMPSAT.yaml',
                   sun_angle=30) -> np.ndarray:
