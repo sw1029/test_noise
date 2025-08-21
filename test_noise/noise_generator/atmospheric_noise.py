@@ -147,4 +147,8 @@ class AtmosphericNoise(Noise):
             atmospheric_noise_image[:, :, 3] = np.clip(radiance2DN(new_radiance_NIR, gain_NIR, offset_NIR),
                                                        0, 255).astype(np.uint8)
 
+        # noise 강도 조절
+        atmospheric_noise_image = src * (1 - factor) + atmospheric_noise_image * factor
+        atmospheric_noise_image = np.clip(atmospheric_noise_image, 0, 255).astype(np.uint8)
+
         return atmospheric_noise_image
