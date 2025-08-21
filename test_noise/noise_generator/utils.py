@@ -26,7 +26,7 @@ def inverse_Minnaert(radiance,i,e,k):
 
     return : 역연산을 적용한 radiance
     '''
-    return radiance / (math.cos(np.deg2rad(e)) ** (k-1) * math.cos(np.deg2rad(i)) ** k)
+    return radiance / (np.cos(np.deg2rad(e)) ** (k-1) * np.cos(np.deg2rad(i)) ** k)
 
 
 def get_rad0_rad1(wavelength, solar_zenith, haze=True):
