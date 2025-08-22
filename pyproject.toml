@@ -26,6 +26,8 @@ dependencies = [
     "PyYAML",
     "scipy",
     "six",
+    "scikit-image",
+    "imutils"
 ]
 
 [tool.setuptools.packages.find]
