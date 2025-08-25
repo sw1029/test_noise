@@ -34,4 +34,4 @@ dependencies = [
 
 where = ["."]
 include = ["test_noise"]      # 이 패키지만 배포
-exclude = ["metadata_sample*"]
+exclude = ["metadata_sample*" , "input_images*"]
