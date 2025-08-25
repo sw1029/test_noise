@@ -1,7 +1,7 @@
-from base import Noise
+from .base import Noise
 import numpy as np
 import os
-from utils import *
+from .utils import *
 import yaml
 import Py6S
 
@@ -21,7 +21,7 @@ class AtmosphericNoise(Noise):
                   sun_angle=30) -> np.ndarray:
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(current_dir, '..', '..', 'config', yaml_name) # config 디렉토리에서 yaml을 읽어들인다
+        config_path = os.path.join(current_dir, '..', 'config', yaml_name) # config 디렉토리에서 yaml을 읽어들인다
 
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
