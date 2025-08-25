@@ -1,4 +1,4 @@
-from base import Noise
+from .base import Noise
 import numpy as np
 
 class SaltPepperNoise(Noise):

@@ -1,6 +1,6 @@
-from base import Noise
+from .base import Noise
 import numpy as np
-from utils import inverse_Minnaert, DN2radiance
+from .utils import inverse_Minnaert, DN2radiance
 import yaml
 import os
 
@@ -12,7 +12,8 @@ terrain noise는 Minnaert correction의 역연산을 취하여 구현.
 
 class TerrainNoise(Noise):
     @staticmethod
-    def add_noise(src,sun_angle=30, factor=0.1, slope=30, 
+    def add_noise(src,
+                  sun_angle=30, factor=0.1, slope=30, 
                   Minnaert_constant_NIR=0.6,
                   Minnaert_constant_R=0.5,
                   Minnaert_constant_G=0.4,
@@ -20,7 +21,7 @@ class TerrainNoise(Noise):
                   yaml_name="KOMPSAT.yaml") -> np.ndarray:
         
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(current_dir, '..', '..', 'config', yaml_name)
+        config_path = os.path.join(current_dir, '..', 'config', yaml_name)
         
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
@@ -43,12 +44,12 @@ class TerrainNoise(Noise):
         radiance_G = DN2radiance(src[:,:,1], gain_G, offset_G)
         radiance_R = DN2radiance(src[:,:,2], gain_R, offset_R)
         
-        terrain_noise_image[0] = inverse_Minnaert(radiance_B, sun_angle, slope, Minnaert_constant_B)
-        terrain_noise_image[1] = inverse_Minnaert(radiance_G, sun_angle, slope, Minnaert_constant_G)
-        terrain_noise_image[2] = inverse_Minnaert(radiance_R, sun_angle, slope, Minnaert_constant_R)
+        terrain_noise_image[:, :, 0] = inverse_Minnaert(radiance_B, sun_angle, slope, Minnaert_constant_B)
+        terrain_noise_image[:, :, 1] = inverse_Minnaert(radiance_G, sun_angle, slope, Minnaert_constant_G)
+        terrain_noise_image[:, :, 2] = inverse_Minnaert(radiance_R, sun_angle, slope, Minnaert_constant_R)
         if channels == 4:
             radiance_NIR = DN2radiance(src[:, :, 3], gain_NIR, offset_NIR)
-            terrain_noise_image[3] = inverse_Minnaert(radiance_NIR, sun_angle, slope, Minnaert_constant_NIR)
+            terrain_noise_image[:, :, 3] = inverse_Minnaert(radiance_NIR, sun_angle, slope, Minnaert_constant_NIR)
 
         # 노이즈 강도 조절
         terrain_noise_image = src * (1 - factor) + terrain_noise_image * factor

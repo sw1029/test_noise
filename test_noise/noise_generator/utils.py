@@ -41,7 +41,11 @@ def get_rad0_rad1(wavelength, solar_zenith, haze=True):
 
     s.wavelength = Wavelength(wavelength) #
 
-    s.geometry = Geometry.User(solar_zenith, 0, 0, 0)
+    s.geometry = Geometry.User()
+    s.geometry.solar_z = np.rad2deg(solar_zenith)
+    s.geometry.solar_a = 0
+    s.geometry.view_z = 0
+    s.geometry.view_a = 0
     s.ground_reflectance = GroundReflectance.HomogeneousLambertian(0.0)
     s.run()
     rad0 = s.outputs.pixel_radiance
