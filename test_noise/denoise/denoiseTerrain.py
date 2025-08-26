@@ -41,9 +41,9 @@ class DenoiseTerrain(DenoiseBase):
             _slope = np.rad2deg(slope) 
         else : _slope = np.rad2deg(slope)     
 
-        radiance_B = DN2radiance(src[:,:,0], gain_B, offset_B)
-        radiance_G = DN2radiance(src[:,:,1], gain_G, offset_G)
-        radiance_R = DN2radiance(src[:,:,2], gain_R, offset_R)
+        radiance_B = np.clip(DN2radiance(src[:,:,0], gain_B, offset_B), 0, None)
+        radiance_G = np.clip(DN2radiance(src[:,:,1], gain_G, offset_G), 0, None)
+        radiance_R = np.clip(DN2radiance(src[:,:,2], gain_R, offset_R), 0, None)
         
         terrain_denoise_image[:, :, 0] = Minnaert(radiance_B, sun_angle, _slope, Minnaert_constant_B)
         terrain_denoise_image[:, :, 0] = radiance2DN(terrain_denoise_image[:, :, 0], gain_B, offset_B)
