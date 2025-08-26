@@ -1,7 +1,7 @@
-from .base import Noise
+from .base import NoiseBase
 import numpy as np
 
-class MissingLineNoise(Noise):
+class MissingLineNoise(NoiseBase):
     @staticmethod
     def add_noise(src, num_threshold=10, len_threshold=512) -> np.ndarray:
         rows, cols, channels = src.shape

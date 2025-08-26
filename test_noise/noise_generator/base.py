@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 
-class Noise(ABC):
+class NoiseBase(ABC):
     """
     모든 노이즈에 대한 기본 클래스입니다. 추후 기능 확장시 해당 클래스를 상속하여 확장합니다.
 

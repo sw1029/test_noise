@@ -1,7 +1,7 @@
-from .base import Noise
+from .base import NoiseBase
 import numpy as np
 
-class StripingNoise(Noise):
+class StripingNoise(NoiseBase):
     @staticmethod
     def add_noise(src, noise_strength=10, stripe_width=2, direction='horizontal') -> np.ndarray:
         rows, cols, channels = src.shape

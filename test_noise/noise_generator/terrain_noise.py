@@ -1,4 +1,4 @@
-from .base import Noise
+from .base import NoiseBase
 import numpy as np
 from ..utils import inverse_Minnaert, DN2radiance, radiance2DN
 import yaml
@@ -10,7 +10,7 @@ terrain noise는 Minnaert correction의 역연산을 취하여 구현.
 이 중 Minnaert 상수와 slope는 임의의 값으로 설정하며, 파라미터 주입을 통하여 조정 가능하도록 구현하였음.
 '''
 
-class TerrainNoise(Noise):
+class TerrainNoise(NoiseBase):
     @staticmethod
     def add_noise(src,
                   sun_angle=30, factor=0.1, slope=30, 

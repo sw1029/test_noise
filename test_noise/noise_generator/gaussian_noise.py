@@ -1,7 +1,7 @@
-from .base import Noise
+from .base import NoiseBase
 import numpy as np
 
-class GaussianNoise(Noise):
+class GaussianNoise(NoiseBase):
     @staticmethod
     def add_noise(src, mean=0, var=50) -> np.ndarray:
         sigma = var ** 0.5

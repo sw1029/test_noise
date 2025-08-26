@@ -1,7 +1,7 @@
-from .base import Noise
+from .base import NoiseBase
 import numpy as np
 
-class SaltPepperNoise(Noise):
+class SaltPepperNoise(NoiseBase):
     @staticmethod
     def add_noise(src, s_vs_p = 0.5, amount = 0.02) -> np.ndarray:
         noisy_image = np.copy(src)

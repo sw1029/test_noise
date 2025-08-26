@@ -1,7 +1,7 @@
-from .base import Noise
+from .base import NoiseBase
 import numpy as np  
 
-class PoissonNoise(Noise):
+class PoissonNoise(NoiseBase):
     @staticmethod
     def add_noise(src, factor = 0.1) -> np.ndarray:
         noisy_image = np.copy(src)

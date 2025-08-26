@@ -1,8 +1,8 @@
-from .base import Noise
+from .base import NoiseBase
 import numpy as np
 import cv2
 
-class VignettingNoise(Noise):
+class VignettingNoise(NoiseBase):
     @staticmethod
     def add_noise(src, strength=0.4, power=2.3):
         rows, cols, channels = src.shape

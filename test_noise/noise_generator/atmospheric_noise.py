@@ -1,4 +1,4 @@
-from .base import Noise
+from .base import NoiseBase
 import numpy as np
 import os
 from ..utils import *
@@ -12,7 +12,7 @@ Ls = H * ρ * T + Lp 에서의 H(total downwelling된 radiance)를 reflectance�
 (pi * radiance * d^2) / (ESUN * sinθ)의 역연산을 통해 구하고, T값과 Lp값은 py6s를 통해 계산하는 방식으로 역연산
 '''
 
-class AtmosphericNoise(Noise):
+class AtmosphericNoise(NoiseBase):
     @staticmethod
     def add_noise(src,
                   factor=0.1,
