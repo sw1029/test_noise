@@ -40,25 +40,33 @@ class TerrainNoise(NoiseBase):
         rows, cols, channels = src.shape
         terrain_noise_image = src.copy()
 
-        radiance_B = np.clip(DN2radiance(src[:,:,0], gain_B, offset_B), 0, None)
-        radiance_G = np.clip(DN2radiance(src[:,:,1], gain_G, offset_G), 0, None)
-        radiance_R = np.clip(DN2radiance(src[:,:,2], gain_R, offset_R), 0, None)
+        #radiance_B = np.clip(DN2radiance(src[:,:,0], gain_B, offset_B), 0, None)
+        #radiance_G = np.clip(DN2radiance(src[:,:,1], gain_G, offset_G), 0, None)
+        #radiance_R = np.clip(DN2radiance(src[:,:,2], gain_R, offset_R), 0, None)
         
+        radiance_B = DN2radiance(src[:,:,0], gain_B, offset_B)
+        radiance_G = DN2radiance(src[:,:,1], gain_G, offset_G)
+        radiance_R = DN2radiance(src[:,:,2], gain_R, offset_R)
+
         terrain_noise_image[:, :, 0] = inverse_Minnaert(radiance_B, sun_angle, slope, Minnaert_constant_B)
+        terrain_noise_image[:, :, 0] = radiance_B * (1 - factor) + terrain_noise_image[:, :, 0] * factor
         terrain_noise_image[:, :, 0] = radiance2DN(terrain_noise_image[:, :, 0], gain_B, offset_B)
 
         terrain_noise_image[:, :, 1] = inverse_Minnaert(radiance_G, sun_angle, slope, Minnaert_constant_G)
+        terrain_noise_image[:, :, 1] = radiance_G * (1 - factor) + terrain_noise_image[:, :, 1] * factor
         terrain_noise_image[:, :, 1] = radiance2DN(terrain_noise_image[:, :, 1], gain_G, offset_G)
 
         terrain_noise_image[:, :, 2] = inverse_Minnaert(radiance_R, sun_angle, slope, Minnaert_constant_R)
+        terrain_noise_image[:, :, 2] = radiance_R * (1 - factor) + terrain_noise_image[:, :, 2] * factor
         terrain_noise_image[:, :, 2] = radiance2DN(terrain_noise_image[:, :, 2], gain_R, offset_R)
         
         if channels == 4:
             radiance_NIR = DN2radiance(src[:, :, 3], gain_NIR, offset_NIR)
             terrain_noise_image[:, :, 3] = inverse_Minnaert(radiance_NIR, sun_angle, slope, Minnaert_constant_NIR)
+            terrain_noise_image[:, :, 3] = radiance_NIR * (1 - factor) + terrain_noise_image[:, :, 3] * factor
             terrain_noise_image[:, :, 3] = radiance2DN(terrain_noise_image[:, :, 3], gain_NIR, offset_NIR)
 
         # 노이즈 강도 조절
-        terrain_noise_image = src * (1 - factor) + terrain_noise_image * factor
+        #terrain_noise_image = src * (1 - factor) + terrain_noise_image * factor
         terrain_noise_image = np.clip(terrain_noise_image, 0, 255).astype(np.uint8)
         return terrain_noise_image
