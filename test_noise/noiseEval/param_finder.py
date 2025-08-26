@@ -2,8 +2,8 @@
 균일한 노이즈 평가를 위한 파라미터 탐색기
 '''
 
-from noiseGenerator import *
-from metric import *
+from ..noiseGenerator import *
+from .metric import *
 import numpy as np
 
 NOISE = {

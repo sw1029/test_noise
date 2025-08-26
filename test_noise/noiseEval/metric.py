@@ -1,4 +1,4 @@
-from noiseGenerator import *
+from ..noiseGenerator import *
 import numpy as np
 from skimage.metrics import structural_similarity as ss
 
