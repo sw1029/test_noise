@@ -5,6 +5,7 @@
 from ..noiseGenerator import *
 from .metric import *
 import numpy as np
+from tqdm import tqdm
 
 NOISE = {
     'gaussian': gaussianNoise,
@@ -20,7 +21,7 @@ NOISE = {
 
 METRIC = {
     'psnr': {'func': psnr, 'positive': False},
-    'rmse': {'func': rsme, 'positive': True},
+    'rmse': {'func': rmse, 'positive': True},
     'mae': {'func': mae, 'positive': True},
     'ssim': {'func': ssim, 'positive': False}
 }
@@ -29,9 +30,9 @@ PARAMS = {
     'gaussian': ('var', 0, 10000),
     'salt_pepper': ('amount', 0.0, 1.0),
     'vignetting': ('strength', 0.0, 1.0),
-    'missing_line': ('num_threshold', 1, 100), # 다른 파라미터는 기본값 사용
-    'striping': ('noise_strength', 0, 50),
-    'sun_angle': ('intensity', 0.0, 1.0),
+    'missingLine': ('num_threshold', 1, 100), # 다른 파라미터는 기본값 사용
+    'striping': ('noise_strength', 1, 50),
+    'sunAngle': ('intensity', 0.0, 1.0),
     'terrain': ('factor', 0.0, 1.0),
     'atmospheric': ('factor', 0.0, 1.0),
     'poisson': ('factor', 0.0, 1.0)
@@ -49,16 +50,16 @@ def find_param(img, target,
 
     positive = metric['positive']
 
-    for _ in range(iter):
+    for _ in tqdm(range(iter), desc = f"<<finding {noise_type}>> target value:{target}"):
         mid = (min + max) / 2
         noisy_img = noise(img, **{param_name: mid})
-        value = metric(img, noisy_img)
+        value = metric['func'](img, noisy_img)
 
         if abs(value - target) < tol:
-            return mid
+            return mid , value
 
         if (positive and value < target) or (not positive and value > target):
             min = mid
         else:
             max = mid
-    return (min + max) / 2
+    return (min + max) / 2 , value

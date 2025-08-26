@@ -14,7 +14,7 @@ def psnr(origin, noisy):
     psnr_value = 20 * np.log10(max_pixel / np.sqrt(mse))
     return psnr_value
 
-def rsme(origin, noisy):
+def rmse(origin, noisy):
     origin = origin.astype(np.float64)
     noisy = noisy.astype(np.float64)
     
