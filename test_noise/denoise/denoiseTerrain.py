@@ -1,10 +1,10 @@
-from .base import DenoiseBase
+from .base import Denoise
 from ..utils import *
 import numpy as np
 import yaml
 import os
 
-class DenoiseTerrain(DenoiseBase):
+class DenoiseTerrain(Denoise):
     @staticmethod
     def denoise(src,
                   sun_angle=30, 

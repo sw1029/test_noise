@@ -1,10 +1,10 @@
-from .base import DenoiseBase
+from .base import Denoise
 from ..utils import *
 import numpy as np
 import os
 import yaml
 
-class DenoiseAtmospheric(DenoiseBase):
+class DenoiseAtmospheric(Denoise):
     @staticmethod
     def denoise(src,
                   haze=True, rayleigh=True,

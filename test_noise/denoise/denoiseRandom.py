@@ -22,7 +22,7 @@ class DenoiseRandom(Denoise):
         if type == 'gaussian':
             img = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 21)
 
-        elif type == 'salt & pepper':
+        elif type == 'saltPepper':
             img = cv2.medianBlur(img, 3)
         
         elif type == 'poisson':
