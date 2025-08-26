@@ -60,5 +60,5 @@ class TerrainNoise(NoiseBase):
 
         # 노이즈 강도 조절
         terrain_noise_image = src * (1 - factor) + terrain_noise_image * factor
-        terrain_noise_image = np.clip(terrain_noise_image * factor, 0, 255).astype(np.uint8)
+        terrain_noise_image = np.clip(terrain_noise_image, 0, 255).astype(np.uint8)
         return terrain_noise_image
