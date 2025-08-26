@@ -1,5 +1,5 @@
-from test_noise.noise_generator import terrainNoise
-from test_noise.noise_generator import atmosphericNoise
+from test_noise.noiseGenerator import terrainNoise
+from test_noise.noiseGenerator import atmosphericNoise
 import cv2
 import os
 
