@@ -28,6 +28,15 @@ def inverse_Minnaert(radiance,i,e,k):
     '''
     return radiance / (np.cos(np.deg2rad(e)) ** (k-1) * np.cos(np.deg2rad(i)) ** k)
 
+def Minnaert(radiance, i,e,k):
+    '''
+    i : 태양 입사각
+    e : slope
+    k : Minnaert 상수
+
+    return : Minnaert 보정값
+    '''
+    return radiance * (np.cos(np.deg2rad(e)) ** (k-1)) * (np.cos(np.deg2rad(i)) ** k)
 
 def get_rad0_rad1(wavelength, solar_zenith, haze=True):
     s = SixS()
