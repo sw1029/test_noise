@@ -6,7 +6,7 @@ import yaml
 
 class DenoiseAtmospheric(Denoise):
     @staticmethod
-    def denoise(src,
+    def denoise(src, factor = 0.3,
                   haze=True, rayleigh=True,
                   yaml_name='KOMPSAT.yaml',
                   sun_angle=30) -> np.ndarray:
@@ -91,28 +91,46 @@ class DenoiseAtmospheric(Denoise):
             baseNIR = reflectance2radiance(1.0, 1.0, ESUN_NIR, solar_zenith)
         
         if haze and rayleigh:
-            new_radiance_B = (radiance_B - rad0_both_B) * baseB / (rad1_both_B - rad0_both_B)
-            new_radiance_G = (radiance_G - rad0_both_G) * baseG / (rad1_both_G - rad0_both_G)
-            new_radiance_R = (radiance_R - rad0_both_R) * baseR / (rad1_both_R - rad0_both_R)
-            if channels == 4 :
-                new_radiance_NIR = (radiance_NIR - rad0_both_NIR) * baseNIR / (rad1_both_NIR - rad0_both_NIR)
+            denominator_B = (1 - factor) + (factor / baseB) * (rad1_both_B - rad0_both_B)
+            new_radiance_B = (radiance_B - factor * rad0_both_B) / denominator_B
+
+            denominator_G = (1 - factor) + (factor / baseG) * (rad1_both_G - rad0_both_G)
+            new_radiance_G = (radiance_G - factor * rad0_both_G) / denominator_G
+
+            denominator_R = (1 - factor) + (factor / baseR) * (rad1_both_R - rad0_both_R)
+            new_radiance_R = (radiance_R - factor * rad0_both_R) / denominator_R
+            
+            if channels == 4:
+                denominator_NIR = (1 - factor) + (factor / baseNIR) * (rad1_both_NIR - rad0_both_NIR)
+                new_radiance_NIR = (radiance_NIR - factor * rad0_both_NIR) / denominator_NIR
+
         elif haze and not rayleigh:
-            new_radiance_B = ((radiance_B - (rad0_both_B - rad0_rayleigh_B))
-                              * baseB / ((rad1_both_B - rad0_both_B) - (rad1_rayleigh_B - rad0_rayleigh_B)))
-            new_radiance_G = ((radiance_G - (rad0_both_G - rad0_rayleigh_G))
-                              * baseG / ((rad1_both_G - rad0_both_G) - (rad1_rayleigh_G - rad0_rayleigh_G)))
-            new_radiance_R = ((radiance_R - (rad0_both_R - rad0_rayleigh_R))
-                              * baseR / ((rad1_both_R - rad0_both_R) - (rad1_rayleigh_R - rad0_rayleigh_R)))
-            if channels == 4 :
-                new_radiance_NIR = ((radiance_NIR- (rad0_both_NIR - rad0_rayleigh_NIR))
-                                  * baseNIR / ((rad1_both_NIR - rad0_both_NIR) - (rad1_rayleigh_NIR - rad0_rayleigh_NIR)))
+            denominator_B = (1 - factor) + (factor / baseB) * ((rad1_both_B - rad0_both_B) - (rad1_rayleigh_B - rad0_rayleigh_B))
+            new_radiance_B = (radiance_B - factor * (rad0_both_B - rad0_rayleigh_B)) / denominator_B
+
+            denominator_G = (1 - factor) + (factor / baseG) * ((rad1_both_G - rad0_both_G) - (rad1_rayleigh_G - rad0_rayleigh_G))
+            new_radiance_G = (radiance_G - factor * (rad0_both_G - rad0_rayleigh_G)) / denominator_G
+
+            denominator_R = (1 - factor) + (factor / baseR) * ((rad1_both_R - rad0_both_R) - (rad1_rayleigh_R - rad0_rayleigh_R))
+            new_radiance_R = (radiance_R - factor * (rad0_both_R - rad0_rayleigh_R)) / denominator_R
+            
+            if channels == 4:
+                denominator_NIR = (1 - factor) + (factor / baseNIR) * ((rad1_both_NIR - rad0_both_NIR) - (rad1_rayleigh_NIR - rad0_rayleigh_NIR))
+                new_radiance_NIR = (radiance_NIR - factor * (rad0_both_NIR - rad0_rayleigh_NIR)) / denominator_NIR
 
         elif not haze and rayleigh:
-            new_radiance_B = (radiance_B - rad0_rayleigh_B) * baseB / (rad1_rayleigh_B - rad0_rayleigh_B)
-            new_radiance_G = (radiance_G - rad0_rayleigh_G) * baseG / (rad1_rayleigh_G - rad0_rayleigh_G)
-            new_radiance_R = (radiance_R - rad0_rayleigh_R) * baseR / (rad1_rayleigh_R - rad0_rayleigh_R)
-            if channels == 4 :
-                new_radiance_NIR = (radiance_NIR - rad0_rayleigh_NIR) * baseNIR / (rad1_rayleigh_NIR - rad0_rayleigh_NIR)
+            denominator_B = (1 - factor) + (factor / baseB) * (rad1_rayleigh_B - rad0_rayleigh_B)
+            new_radiance_B = (radiance_B - factor * rad0_rayleigh_B) / denominator_B
+
+            denominator_G = (1 - factor) + (factor / baseG) * (rad1_rayleigh_G - rad0_rayleigh_G)
+            new_radiance_G = (radiance_G - factor * rad0_rayleigh_G) / denominator_G
+
+            denominator_R = (1 - factor) + (factor / baseR) * (rad1_rayleigh_R - rad0_rayleigh_R)
+            new_radiance_R = (radiance_R - factor * rad0_rayleigh_R) / denominator_R
+            
+            if channels == 4:
+                denominator_NIR = (1 - factor) + (factor / baseNIR) * (rad1_rayleigh_NIR - rad0_rayleigh_NIR)
+                new_radiance_NIR = (radiance_NIR - factor * rad0_rayleigh_NIR) / denominator_NIR
 
 
         # radiance -> DN 변환 후 0~255 범위 내의 값이 되도록 clipping 수행
