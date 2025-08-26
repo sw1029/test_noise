@@ -1,6 +1,6 @@
 from .base import Noise
 import numpy as np
-from .utils import *
+from ..utils import *
 
 '''
 기존 구현 코드의 absolute correction의 역연산을 취한 부분을 그대로 사용한다.

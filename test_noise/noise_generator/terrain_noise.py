@@ -1,6 +1,6 @@
 from .base import Noise
 import numpy as np
-from .utils import inverse_Minnaert, DN2radiance
+from ..utils import inverse_Minnaert, DN2radiance
 import yaml
 import os
 

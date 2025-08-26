@@ -1,7 +1,7 @@
 from .base import Noise
 import numpy as np
 import os
-from .utils import *
+from ..utils import *
 import yaml
 import Py6S
 
