@@ -6,7 +6,7 @@ import os
 
 class DenoiseTerrain(Denoise):
     @staticmethod
-    def denoise(src, factor = 0.7,
+    def denoise(src, factor = 0.3,
                   sun_angle=30, 
                   DEM=None, pixel_size=1.0,
                   slope=30, 
@@ -62,6 +62,5 @@ class DenoiseTerrain(Denoise):
             terrain_denoise_image[:, :, 3] = Minnaert(radiance_NIR, sun_angle, _slope, Minnaert_constant_NIR)
             terrain_denoise_image[:, :, 3] = radiance2DN(terrain_denoise_image[:, :, 3], gain_NIR, offset_NIR)
        
-        terrain_denoise_image = src + factor * (terrain_denoise_image - src)
         terrain_denoise_image = np.clip(terrain_denoise_image, 0, 255).astype(np.uint8)
         return terrain_denoise_image
