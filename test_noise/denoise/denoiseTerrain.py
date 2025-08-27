@@ -6,7 +6,7 @@ import os
 
 class DenoiseTerrain(Denoise):
     @staticmethod
-    def denoise(src, factor = 0.3,
+    def denoise(src,
                   sun_angle=30, 
                   DEM=None, pixel_size=1.0,
                   slope=30, 
@@ -39,12 +39,9 @@ class DenoiseTerrain(Denoise):
             px, py = np.gradient(DEM, pixel_size)
             _slope = np.arctan(np.sqrt(px**2 + py**2))
             _slope = np.rad2deg(_slope) 
-        else : _slope = slope     
-
-        radiance_B = np.clip(DN2radiance(src[:,:,0], gain_B, offset_B), 0, None)
-        radiance_G = np.clip(DN2radiance(src[:,:,1], gain_G, offset_G), 0, None)
-        radiance_R = np.clip(DN2radiance(src[:,:,2], gain_R, offset_R), 0, None)
+        else : _slope = slope    
         
+        # 해당 radiance 값에 음수 clipping 적용 시 단색 이미지가 반환되는 오류가 발생.
         radiance_B = DN2radiance(src[:,:,0], gain_B, offset_B)
         radiance_G = DN2radiance(src[:,:,1], gain_G, offset_G)
         radiance_R = DN2radiance(src[:,:,2], gain_R, offset_R)
