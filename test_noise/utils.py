@@ -1,7 +1,39 @@
-import math
 import numpy as np
+import math
 from Py6S import SixS, AtmosProfile, AeroProfile, GroundReflectance, Wavelength, Geometry
 import cv2
+
+# DEM을 통해 slope와 태양 입사각 계산
+def angle(DEM, sun_azimuth, sun_elevation):
+    sun_azimuth_rad = np.deg2rad(sun_azimuth)
+    sun_elevation_rad = np.deg2rad(sun_elevation)
+
+    dz_dy, dz_dx = np.gradient(DEM)
+
+    slope_rad = np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))
+    slope_deg = np.rad2deg(slope_rad)
+
+    x = -dz_dx
+    y = -dz_dy
+    z = np.ones_like(DEM)
+
+    magnitude = np.sqrt(x**2 + y**2 + z**2)
+    
+    magnitude = np.maximum(magnitude, 1e-6)
+    x /= magnitude
+    y /= magnitude
+    z /= magnitude
+
+    zenith_rad = np.deg2rad(90 - sun_elevation)
+    sun_x = np.sin(zenith_rad) * np.sin(sun_azimuth_rad)
+    sun_y = np.sin(zenith_rad) * np.cos(sun_azimuth_rad)
+    sun_z = np.cos(zenith_rad)
+
+    cos_i = x * sun_x + y * sun_y + z * sun_z
+    cos_i = np.clip(cos_i, -1.0, 1.0)
+    angle = np.rad2deg(np.arccos(cos_i))
+    
+    return angle, slope_deg
 
 # radiance <-> reflectance
 def radiance2reflectance(radiance, distance, ESUN, solar_angle):
@@ -27,7 +59,16 @@ def inverse_Minnaert(radiance,i,e,k):
 
     return : 역연산을 적용한 radiance
     '''
-    return radiance / (np.cos(np.deg2rad(e)) ** (k-1) * np.cos(np.deg2rad(i)) ** k)
+    cos_i_val = np.cos(np.deg2rad(i))
+    cos_e_val = np.cos(np.deg2rad(e))
+
+    cos_i_val = np.maximum(cos_i_val, 0)
+    cos_e_val = np.maximum(cos_e_val, 0)
+
+    cos_i_val = np.maximum(cos_i_val, 1e-6)
+    cos_e_val = np.maximum(cos_e_val, 1e-6)
+    
+    return radiance / (cos_e_val ** (k-1) * cos_i_val ** k)
 
 def Minnaert(radiance, i,e,k):
     '''
@@ -37,7 +78,13 @@ def Minnaert(radiance, i,e,k):
 
     return : Minnaert 보정값
     '''
-    return radiance * (np.cos(np.deg2rad(e)) ** (k-1)) * (np.cos(np.deg2rad(i)) ** k)
+    cos_i_val = np.cos(np.deg2rad(i))
+    cos_e_val = np.cos(np.deg2rad(e))
+
+    cos_i_val = np.maximum(cos_i_val, 0)
+    cos_e_val = np.maximum(cos_e_val, 0)
+    
+    return radiance * (cos_e_val ** (k-1)) * (cos_i_val ** k)
 
 def get_rad0_rad1(wavelength, solar_zenith, haze=True):
     s = SixS()
@@ -80,7 +127,7 @@ def dis(image):
             if np.max(channel) > np.min(channel):
                 channel = (channel - np.min(channel)) / (np.max(channel) - np.min(channel))
             else:
-                channel.fill(0)
+                channel.fill(0.01)
             normalized_channels.append(channel * 255)
         display_image = cv2.merge(normalized_channels)
         return display_image.astype(np.uint8) 
