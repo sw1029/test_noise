@@ -66,6 +66,7 @@ class DenoiseTerrain(Denoise):
                      eps: float = 1e-3,
                      sample_max: int = 200_000,
                      mode: str = "luminance",
+                     method: str = "c",
                      scale_clip: tuple[float, float] | None = (0.5, 1.5),
                      shadow_thresh: float | None = 0.2,
                      robust: bool = True,
@@ -107,7 +108,37 @@ class DenoiseTerrain(Denoise):
         X = np.concatenate([cosI_s, np.ones_like(cosI_s)], axis=1)  # [cosI, 1]
         XtX = X.T @ X
 
-        if mode == "per_channel":
+        if method.lower() == "minnaert":
+            # Minnaert 보정: Lcorr = L * (cosZ / cosI)^k, k는 회귀로 추정 (휘도 기반)
+            if C >= 3:
+                Y = 0.114 * img[..., 0] + 0.587 * img[..., 1] + 0.299 * img[..., 2]
+            else:
+                Y = img[..., 0]
+
+            # 유효 샘플: cosI>eps, Y>0
+            valid_k = (cosI.ravel()[sel] > eps)
+            y_samp = Y.ravel()[sel][valid_k]
+            x_samp = cosI.ravel()[sel][valid_k]
+            # 로그-선형화: log(Y) = k * log(cosI) + const (대략적 근사)
+            y_samp = np.clip(y_samp, eps, None)
+            x_samp = np.clip(x_samp, eps, None)
+            Xk = np.vstack([np.log(x_samp), np.ones_like(x_samp)]).T
+            betak, _, _, _ = np.linalg.lstsq(Xk, np.log(y_samp), rcond=None)
+            k_est = float(betak[0]) if np.isfinite(betak[0]) else 0.5
+
+            # 스케일 계산 및 적용
+            denom = np.maximum(cosI, eps)
+            scale = (np.sin(np.deg2rad(sun_elevation)) / denom) ** k_est
+            if shadow_thresh is not None:
+                mask_shadow = cosI < shadow_thresh
+                scale = np.where(mask_shadow, 1.0 + 0.5 * (scale - 1.0), scale)
+            if scale_clip is not None:
+                smin, smax = scale_clip
+                scale = np.clip(scale, smin, smax)
+            for ch in range(C):
+                out[..., ch] = img[..., ch] * scale
+
+        elif mode == "per_channel":
             for ch in range(C):
                 L = img[..., ch]
                 y = L.ravel()[sel].reshape(-1, 1)
