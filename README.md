@@ -13,18 +13,18 @@ conda install -c conda-forge py6s -y # conda 환경이라면 해당 명령어를
 - metadata_sample 
 
     예시 메타데이터 샘플 파일이 들어있습니다.
-    [Noise Generator 모듈](./test_noise/noiseGenerator/README.md)
+    
 - noise_generator 
-
+[Noise Generator 모듈](./test_noise/noiseGenerator/README.md)
     각 noise들이 구현된 class들이 존재합니다
-    [Noise Evaluator 모듈](./test_noise/noiseEval/README.md)
+    
 - noise_eval
-
+[Noise Evaluator 모듈](./test_noise/noiseEval/README.md)
     noise generator에서 구현된 noise를 평가하기 위한 모듈입니다.
 - denoise
-
+[Denoise 모듈](./test_noise/denoise/README.md)
     오픈 소스로 제공되어 있는 왜곡(노이즈) 전처리 프로그램을 사용해 생성된 보정 이미지와 L1, L2 간의 유사도 비교하기 위한 모듈입니다
-    [Denoise 모듈](./test_noise/denoise/README.md)
+    
 
 ## 사용 예시 (Usage Examples)
 
