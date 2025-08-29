@@ -90,46 +90,59 @@ class DenoiseAtmospheric(Denoise):
         if channels == 4:
             baseNIR = reflectance2radiance(1.0, 1.0, ESUN_NIR, solar_zenith)
         
+        eps = 1e-6
         if haze and rayleigh:
             denominator_B = (1 - factor) + (factor / baseB) * (rad1_both_B - rad0_both_B)
+            denominator_B = np.maximum(denominator_B, eps)
             new_radiance_B = (radiance_B - factor * rad0_both_B) / denominator_B
 
             denominator_G = (1 - factor) + (factor / baseG) * (rad1_both_G - rad0_both_G)
+            denominator_G = np.maximum(denominator_G, eps)
             new_radiance_G = (radiance_G - factor * rad0_both_G) / denominator_G
 
             denominator_R = (1 - factor) + (factor / baseR) * (rad1_both_R - rad0_both_R)
+            denominator_R = np.maximum(denominator_R, eps)
             new_radiance_R = (radiance_R - factor * rad0_both_R) / denominator_R
             
             if channels == 4:
                 denominator_NIR = (1 - factor) + (factor / baseNIR) * (rad1_both_NIR - rad0_both_NIR)
+                denominator_NIR = np.maximum(denominator_NIR, eps)
                 new_radiance_NIR = (radiance_NIR - factor * rad0_both_NIR) / denominator_NIR
 
         elif haze and not rayleigh:
             denominator_B = (1 - factor) + (factor / baseB) * ((rad1_both_B - rad0_both_B) - (rad1_rayleigh_B - rad0_rayleigh_B))
+            denominator_B = np.maximum(denominator_B, eps)
             new_radiance_B = (radiance_B - factor * (rad0_both_B - rad0_rayleigh_B)) / denominator_B
 
             denominator_G = (1 - factor) + (factor / baseG) * ((rad1_both_G - rad0_both_G) - (rad1_rayleigh_G - rad0_rayleigh_G))
+            denominator_G = np.maximum(denominator_G, eps)
             new_radiance_G = (radiance_G - factor * (rad0_both_G - rad0_rayleigh_G)) / denominator_G
 
             denominator_R = (1 - factor) + (factor / baseR) * ((rad1_both_R - rad0_both_R) - (rad1_rayleigh_R - rad0_rayleigh_R))
+            denominator_R = np.maximum(denominator_R, eps)
             new_radiance_R = (radiance_R - factor * (rad0_both_R - rad0_rayleigh_R)) / denominator_R
             
             if channels == 4:
                 denominator_NIR = (1 - factor) + (factor / baseNIR) * ((rad1_both_NIR - rad0_both_NIR) - (rad1_rayleigh_NIR - rad0_rayleigh_NIR))
+                denominator_NIR = np.maximum(denominator_NIR, eps)
                 new_radiance_NIR = (radiance_NIR - factor * (rad0_both_NIR - rad0_rayleigh_NIR)) / denominator_NIR
 
         elif not haze and rayleigh:
             denominator_B = (1 - factor) + (factor / baseB) * (rad1_rayleigh_B - rad0_rayleigh_B)
+            denominator_B = np.maximum(denominator_B, eps)
             new_radiance_B = (radiance_B - factor * rad0_rayleigh_B) / denominator_B
 
             denominator_G = (1 - factor) + (factor / baseG) * (rad1_rayleigh_G - rad0_rayleigh_G)
+            denominator_G = np.maximum(denominator_G, eps)
             new_radiance_G = (radiance_G - factor * rad0_rayleigh_G) / denominator_G
 
             denominator_R = (1 - factor) + (factor / baseR) * (rad1_rayleigh_R - rad0_rayleigh_R)
+            denominator_R = np.maximum(denominator_R, eps)
             new_radiance_R = (radiance_R - factor * rad0_rayleigh_R) / denominator_R
             
             if channels == 4:
                 denominator_NIR = (1 - factor) + (factor / baseNIR) * (rad1_rayleigh_NIR - rad0_rayleigh_NIR)
+                denominator_NIR = np.maximum(denominator_NIR, eps)
                 new_radiance_NIR = (radiance_NIR - factor * rad0_rayleigh_NIR) / denominator_NIR
 
 
