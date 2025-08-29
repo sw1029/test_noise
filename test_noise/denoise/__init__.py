@@ -13,3 +13,4 @@ stripe = DenoiseStripe.denoise_algotom
 sunAngle = DenoiseSunAngle.denoise
 vignetting = DenoiseVignetting.denoise
 terrain = DenoiseTerrain.denoise
+terrainTopo = DenoiseTerrain.denoise_topo

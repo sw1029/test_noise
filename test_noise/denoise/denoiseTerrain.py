@@ -58,3 +58,138 @@ class DenoiseTerrain(Denoise):
        
         terrain_denoise_image = np.nan_to_num(terrain_denoise_image)
         return terrain_denoise_image
+    @staticmethod
+    def denoise_topo(src: np.ndarray,
+                     DEM: np.ndarray | None = None,
+                     sun_azimuth: float = 225.0,
+                     sun_elevation: float = 45.0,
+                     eps: float = 1e-3,
+                     sample_max: int = 200_000,
+                     mode: str = "luminance",
+                     scale_clip: tuple[float, float] | None = (0.5, 1.5),
+                     shadow_thresh: float | None = 0.2,
+                     robust: bool = True,
+                     ransac_iter: int = 200,
+                     inlier_sigma: float = 2.5) -> np.ndarray:
+        """
+        C-correction 기반 지형 보정(게인/오프셋 불요): DenoiseTerrain 보조 함수
+        - 휘도 기반 단일 스케일 또는 채널별(per_channel) 방식 선택
+        - RANSAC 기반 강건 회귀, 그림자 보호, 보정 강도 클리핑 제공
+
+        참고 레퍼런스
+        - https://github.com/OSGeo/grass/blob/main/imagery/i.topo.corr/i.topo.corr.md
+        - https://grass.osgeo.org/grass-stable/manuals/i.topo.corr.html
+        """
+        if DEM is None:
+            return src
+
+        orig_dtype = src.dtype
+        img = src.astype(np.float32, copy=False)
+
+        i_deg, _ = angle(DEM, sun_azimuth, sun_elevation)
+        cosI = np.cos(np.deg2rad(i_deg))
+        cosZ = np.sin(np.deg2rad(sun_elevation))
+
+        valid = np.isfinite(cosI) & (cosI > eps)
+        if not np.any(valid):
+            return src
+
+        H, W, C = img.shape
+        out = img.copy()
+
+        idx = np.flatnonzero(valid)
+        if idx.size > sample_max:
+            sel = np.random.default_rng(0).choice(idx, size=sample_max, replace=False)
+        else:
+            sel = idx
+
+        cosI_s = cosI.ravel()[sel].reshape(-1, 1)
+        X = np.concatenate([cosI_s, np.ones_like(cosI_s)], axis=1)  # [cosI, 1]
+        XtX = X.T @ X
+
+        if mode == "per_channel":
+            for ch in range(C):
+                L = img[..., ch]
+                y = L.ravel()[sel].reshape(-1, 1)
+                try:
+                    beta = np.linalg.solve(XtX, X.T @ y)
+                    a = float(beta[0]); b = float(beta[1])
+                except np.linalg.LinAlgError:
+                    a, b = 1.0, 0.0
+
+                c = max((b / a) if abs(a) > eps else 0.0, 0.0)
+                denom = cosI + c
+                scale = (cosZ + c) / np.maximum(denom, eps)
+                if shadow_thresh is not None:
+                    mask_shadow = cosI < shadow_thresh
+                    scale = np.where(mask_shadow, 1.0 + 0.5 * (scale - 1.0), scale)
+                if scale_clip is not None:
+                    smin, smax = scale_clip
+                    scale = np.clip(scale, smin, smax)
+                out[..., ch] = L * scale
+        else:
+            # 휘도 기반(색 보존)
+            if C >= 3:
+                Y = 0.114 * img[..., 0] + 0.587 * img[..., 1] + 0.299 * img[..., 2]
+            else:
+                Y = img[..., 0]
+            y = Y.ravel()[sel].reshape(-1, 1)
+
+            if robust:
+                try:
+                    beta_ols = np.linalg.solve(XtX, X.T @ y)
+                except np.linalg.LinAlgError:
+                    beta_ols = np.array([[1.0], [0.0]], dtype=np.float32)
+                a_best = float(beta_ols[0]); b_best = float(beta_ols[1])
+                inliers_best = np.ones(y.shape[0], dtype=bool)
+
+                rng = np.random.default_rng(0)
+                for _ in range(ransac_iter):
+                    if y.shape[0] < 2:
+                        break
+                    idx2 = rng.choice(y.shape[0], size=2, replace=False)
+                    X2 = X[idx2]
+                    y2 = y[idx2]
+                    try:
+                        beta2 = np.linalg.solve(X2, y2)
+                        a2 = float(beta2[0]); b2 = float(beta2[1])
+                    except np.linalg.LinAlgError:
+                        continue
+                    resid = (X @ beta2 - y).ravel()
+                    std = float(np.std(resid)) + 1e-6
+                    thr = inlier_sigma * std
+                    inliers = np.abs(resid) <= thr
+                    if inliers.sum() > inliers_best.sum():
+                        inliers_best = inliers
+                        a_best, b_best = a2, b2
+                Xin = X[inliers_best]
+                yin = y[inliers_best]
+                try:
+                    beta = np.linalg.solve(Xin.T @ Xin, Xin.T @ yin)
+                    a = float(beta[0]); b = float(beta[1])
+                except np.linalg.LinAlgError:
+                    a, b = a_best, b_best
+            else:
+                try:
+                    beta = np.linalg.solve(XtX, X.T @ y)
+                    a = float(beta[0]); b = float(beta[1])
+                except np.linalg.LinAlgError:
+                    a, b = 1.0, 0.0
+
+            c = max((b / a) if abs(a) > eps else 0.0, 0.0)
+            denom = cosI + c
+            scale = (cosZ + c) / np.maximum(denom, eps)
+            if shadow_thresh is not None:
+                mask_shadow = cosI < shadow_thresh
+                scale = np.where(mask_shadow, 1.0 + 0.5 * (scale - 1.0), scale)
+            if scale_clip is not None:
+                smin, smax = scale_clip
+                scale = np.clip(scale, smin, smax)
+            for ch in range(C):
+                out[..., ch] = img[..., ch] * scale
+
+        if orig_dtype == np.uint8:
+            out = np.clip(out, 0, 255).astype(np.uint8)
+        else:
+            out = np.nan_to_num(out)
+        return out
