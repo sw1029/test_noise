@@ -46,19 +46,32 @@ src = dis(img)
 #dem_cv2 = None
 
 # Noise 추가
-terrain_noised_image = terrainNoise(src, factor=0.3, DEM=dem_cv2)
-atmosphric_noised_image = atmosphericNoise(src, factor=0.3)
+terrain_noised_image = terrainNoise(src, factor=0.7, DEM=dem_cv2)
+atmosphric_noised_image = atmosphericNoise(src, factor=0.7)
 gaussian_noised_image = gaussianNoise(src)
 missing_line_noised_image = missingLineNoise(src)
 salt_pepper_noised_image = saltPepperNoise(src)
 poisson_noised_image = poissonNoise(src)
 striping_noised_image = stripingNoise(src)
-sun_angle_noised_image = sunAngleNoise(src)
+sun_angle_noised_image = sunAngleNoise(src, intensity= 1.0)
 vignetting_noised_image = vignettingNoise(src)
 
 # Denoise
-terrain_denoised_image = terrain(terrain_noised_image, DEM=dem_cv2)
-atmospheric_denoised_image = atmospher(atmosphric_noised_image, haze=True, rayleigh=True, yaml_name='KOMPSAT.yaml', sun_angle=30)
+# 지형 보정: gain/offset이 샘플 이미지에는 없으므로 C-correction 기반 Topo 보정 사용
+# 색 틀어짐 방지를 위해 radiance 기반 단일 스케일, 보정 강도 제한
+terrain_denoised_image = terrainTopo(
+    terrain_noised_image,
+    DEM=dem_cv2,
+    sun_azimuth=225,
+    sun_elevation=45,
+    mode="luminance",
+    scale_clip=(0.8, 1.2),
+    shadow_thresh=0.2,
+    robust=True,
+    ransac_iter=300,
+    inlier_sigma=2.0
+)
+atmospheric_denoised_image = atmospher(atmosphric_noised_image, factor=0.3, haze=True, rayleigh=True, yaml_name='KOMPSAT.yaml', sun_angle=30)
 gaussian_denoised_image = random(gaussian_noised_image, type='gaussian')
 missing_denoised_image = missingLine(missing_line_noised_image)
 salt_pepper_denoised_image = random(salt_pepper_noised_image, type='saltPepper')
@@ -80,8 +93,24 @@ denoised = {
     "Vignetting": vignetting_denoised_image
 }
 
+noisy = {
+    "Terrain": terrain_noised_image,
+    "Atmospheric": atmosphric_noised_image,
+    "Gaussian": gaussian_noised_image,
+    "Missing Line": missing_line_noised_image,
+    "Salt & Pepper": salt_pepper_noised_image,
+    "Poisson": poisson_noised_image,
+    "Striping": striping_noised_image,
+    "Sun Angle": sun_angle_noised_image,
+    "Vignetting": vignetting_noised_image
+}
 
 origin = src
+
+for name, noisy_img in noisy.items():
+    noisy_img_disp = dis(noisy_img)
+    score = ssim(origin, noisy_img_disp)
+    print(f"SSIM Noisy {name}: {score}")
 
 for name, denoised_img in denoised.items():
     denoised_img = dis(denoised_img)
@@ -146,4 +175,3 @@ poisson_param.to_csv(os.path.join(csv_dir, 'poisson_param.csv'))
 striping_param.to_csv(os.path.join(csv_dir, 'striping_param.csv'))
 sun_angle_param.to_csv(os.path.join(csv_dir, 'sun_angle_param.csv'))
 vignetting_param.to_csv(os.path.join(csv_dir, 'vignetting_param.csv'))
-
