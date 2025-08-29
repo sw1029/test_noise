@@ -1,9 +1,13 @@
 from test_noise.noiseGenerator import *
 from test_noise.noiseEval import *
 from test_noise.denoise import *
+from test_noise.utils import dis
+
 import cv2
 import os
 import pandas as pd
+import rasterio
+import numpy as np
 
 image_path = 'input_images/P0000__512__2304___1536.png'  # 원본 이미지 경로
 noisy_dir = 'output/noisy'
@@ -15,10 +19,34 @@ os.makedirs(noisy_dir, exist_ok=True)
 os.makedirs(denoised_dir, exist_ok=True)
 os.makedirs(csv_dir, exist_ok=True)
 
-src = cv2.imread(image_path)
+with rasterio.open("data/sample_rgb.tif") as src:
+    rgb_array = src.read()  # (bands, H, W) 형태
+print(rgb_array.shape)  
+# DEM GeoTIFF
+with rasterio.open("data/sample_dem.tif") as src:
+    dem_array = src.read(1)  # 첫 번째 밴드만 (H, W)
+print(dem_array.shape)  # 예: (512, 512)
+
+# RGB GeoTIFF → OpenCV 스타일 (H, W, C)
+rgb_cv2 = np.transpose(rgb_array, (1, 2, 0))  # (H, W, C)
+# DEM은 단일 채널이므로 그대로 사용 가능 (H, W)
+dem_cv2 = dem_array
+
+# nan 값이 있는지 확인하고, 있다면 0으로 대체합니다.
+if np.isnan(rgb_cv2).any():
+    rgb_cv2 = np.nan_to_num(rgb_cv2, nan=0.0)
+if np.isnan(dem_array).any():
+    dem_array = np.nan_to_num(dem_array, nan=0.0)
+img = cv2.cvtColor(rgb_cv2.astype(np.float32), cv2.COLOR_RGB2BGR)
+
+img = cv2.cvtColor(rgb_cv2.astype(np.float32), cv2.COLOR_RGB2BGR)
+src = dis(img)
+
+#src = cv2.imread(image_path)
+#dem_cv2 = None
 
 # Noise 추가
-terrain_noised_image = terrainNoise(src, factor=0.3)
+terrain_noised_image = terrainNoise(src, factor=0.3, DEM=dem_cv2)
 atmosphric_noised_image = atmosphericNoise(src, factor=0.3)
 gaussian_noised_image = gaussianNoise(src)
 missing_line_noised_image = missingLineNoise(src)
@@ -29,7 +57,7 @@ sun_angle_noised_image = sunAngleNoise(src)
 vignetting_noised_image = vignettingNoise(src)
 
 # Denoise
-terrain_denoised_image = terrain(terrain_noised_image, yaml_name='KOMPSAT.yaml', sun_angle=30)
+terrain_denoised_image = terrain(terrain_noised_image, DEM=dem_cv2)
 atmospheric_denoised_image = atmospher(atmosphric_noised_image, haze=True, rayleigh=True, yaml_name='KOMPSAT.yaml', sun_angle=30)
 gaussian_denoised_image = random(gaussian_noised_image, type='gaussian')
 missing_denoised_image = missingLine(missing_line_noised_image)
