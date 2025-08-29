@@ -37,7 +37,7 @@ algotom 및 FFT 기반 억제 기법으로 줄무늬 노이즈를 제거합니�
 ### Terrain Denoise
 ![Terrain Denoise](../../output/denoised/terrain_denoised_image.png)
 Minnaert 보정으로 지형광 영향을 완화합니다.
-[grass gis 공식문서](https://grass.osgeo.org/grass-stable/manuals/i.topo.corr.html) 기반의 topo 보정 기능이 분기로 구현되어 있습니다.
+[grass gis 공식문서](https://grass.osgeo.org/grass-stable/manuals/i.topo.corr.html), [geeguide](https://github.com/ndminhhus/geeguide/blob/master/04.topo_correction.md) 기반의 topo 보정 기능이 분기로 구현되어 있습니다.
 
 ### Vignetting Denoise
 ![Vignetting Denoise](../../output/denoised/vignetting_denoised_image.png)
