@@ -25,14 +25,14 @@ print(rgb_array.shape)
 # DEM GeoTIFF
 with rasterio.open("data/sample_dem.tif") as src:
     dem_array = src.read(1)  # 첫 번째 밴드만 (H, W)
-print(dem_array.shape)  # 예: (512, 512)
+print(dem_array.shape)
 
 # RGB GeoTIFF → OpenCV 스타일 (H, W, C)
 rgb_cv2 = np.transpose(rgb_array, (1, 2, 0))  # (H, W, C)
 # DEM은 단일 채널이므로 그대로 사용 가능 (H, W)
 dem_cv2 = dem_array
 
-# nan 값이 있는지 확인하고, 있다면 0으로 대체합니다.
+# nan 값이 있는지 확인하고, 있다면 0으로 대체
 if np.isnan(rgb_cv2).any():
     rgb_cv2 = np.nan_to_num(rgb_cv2, nan=0.0)
 if np.isnan(dem_array).any():
@@ -42,7 +42,7 @@ img = cv2.cvtColor(rgb_cv2.astype(np.float32), cv2.COLOR_RGB2BGR)
 img = cv2.cvtColor(rgb_cv2.astype(np.float32), cv2.COLOR_RGB2BGR)
 src = dis(img)
 
-#src = cv2.imread(image_path)
+#src = cv2.imread(image_path) #필요시 테스트용으로 아래의 주석과 함께 활성화.
 #dem_cv2 = None
 
 # Noise 추가
@@ -66,6 +66,28 @@ poisson_denoised_image = random(poisson_noised_image, type='poisson')
 striping_denoised_image = stripe(striping_noised_image)
 sun_angle_denoised_image = sunAngle(sun_angle_noised_image)
 vignetting_denoised_image = vignetting(vignetting_noised_image)
+
+
+denoised = {
+    "Terrain": terrain_denoised_image,
+    "Atmospheric": atmospheric_denoised_image,
+    "Gaussian": gaussian_denoised_image,
+    "Missing Line": missing_denoised_image,
+    "Salt & Pepper": salt_pepper_denoised_image,
+    "Poisson": poisson_denoised_image,
+    "Striping": striping_denoised_image,
+    "Sun Angle": sun_angle_denoised_image,
+    "Vignetting": vignetting_denoised_image
+}
+
+# The original image to compare against (normalized to uint8)
+origin = src
+
+for name, denoised_img in denoised.items():
+    denoised_img = dis(denoised_img)
+    score = ssim(origin, denoised_img)
+    print(f"SSIM {name}: {score}")
+
 
 
 # 결과 이미지 저장
@@ -125,4 +147,3 @@ striping_param.to_csv(os.path.join(csv_dir, 'striping_param.csv'))
 sun_angle_param.to_csv(os.path.join(csv_dir, 'sun_angle_param.csv'))
 vignetting_param.to_csv(os.path.join(csv_dir, 'vignetting_param.csv'))
 
-print("Noise addition completed and images saved.")
