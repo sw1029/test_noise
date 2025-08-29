@@ -12,7 +12,7 @@ terrain noise는 Minnaert correction의 역연산을 취하여 구현.
 
 class TerrainNoise(NoiseBase):
     @staticmethod
-    def add_noise(src,
+    def add_noise(src, DEM=None, pixel_size=1.0,
                   sun_angle=30, factor=0.1, slope=30, 
                   Minnaert_constant_NIR=0.6,
                   Minnaert_constant_R=0.5,
@@ -40,10 +40,19 @@ class TerrainNoise(NoiseBase):
         rows, cols, channels = src.shape
         terrain_noise_image = src.copy()
 
-        radiance_B = np.clip(DN2radiance(src[:,:,0], gain_B, offset_B), 0, None)
-        radiance_G = np.clip(DN2radiance(src[:,:,1], gain_G, offset_G), 0, None)
-        radiance_R = np.clip(DN2radiance(src[:,:,2], gain_R, offset_R), 0, None)
-        
+        if DEM is not None:
+            px, py = np.gradient(DEM, pixel_size)
+            _slope = np.arctan(np.sqrt(px**2 + py**2))
+            _slope = np.rad2deg(_slope) 
+        else : _slope = slope    
+
+        #radiance_B = np.clip(DN2radiance(src[:,:,0], gain_B, offset_B), 0, None)
+        #radiance_G = np.clip(DN2radiance(src[:,:,1], gain_G, offset_G), 0, None)
+        #radiance_R = np.clip(DN2radiance(src[:,:,2], gain_R, offset_R), 0, None)
+        radiance_B = DN2radiance(src[:,:,0], gain_B, offset_B)
+        radiance_G = DN2radiance(src[:,:,1], gain_G, offset_G)
+        radiance_R = DN2radiance(src[:,:,2], gain_R, offset_R)
+
 
         terrain_noise_image[:, :, 0] = inverse_Minnaert(radiance_B, sun_angle, slope, Minnaert_constant_B)
         terrain_noise_image[:, :, 0] = radiance2DN(terrain_noise_image[:, :, 0], gain_B, offset_B)
@@ -61,6 +70,7 @@ class TerrainNoise(NoiseBase):
             terrain_noise_image[:, :, 3] = radiance2DN(terrain_noise_image[:, :, 3], gain_NIR, offset_NIR)
 
         # 노이즈 강도 조절
+        #terrain_noise_image = np.nan_to_num(terrain_noise_image, nan=0.0, posinf=255.0, neginf=0.0)
         terrain_noise_image = src * (1 - factor) + terrain_noise_image * factor
         terrain_noise_image = np.clip(terrain_noise_image, 0, 255).astype(np.uint8)
         return terrain_noise_image
