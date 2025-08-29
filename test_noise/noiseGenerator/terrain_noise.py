@@ -8,6 +8,7 @@ import os
 terrain noise는 Minnaert correction의 역연산을 취하여 구현.
 필요 값: radiance, slope, sun angle, Minnaert 상수
 이 중 Minnaert 상수와 slope는 임의의 값으로 설정하며, 파라미터 주입을 통하여 조정 가능하도록 구현하였음.
+DEM 기입 시 별도 작동하는 분기를 추가하여 noise를 추가 가능하도록 분기를 구현.
 '''
 
 class TerrainNoise(NoiseBase):
