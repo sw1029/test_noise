@@ -17,6 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "algotom",
     "numpy",
     "opencv-python",
     "pandas",
@@ -28,7 +29,8 @@ dependencies = [
     "scipy",
     "six",
     "scikit-image",
-    "imutils"
+    "imutils",
+    "rasterio"
 ]
 
 [tool.setuptools.packages.find]
