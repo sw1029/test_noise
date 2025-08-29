@@ -1,6 +1,7 @@
 import math
 import numpy as np
 from Py6S import SixS, AtmosProfile, AeroProfile, GroundReflectance, Wavelength, Geometry
+import cv2
 
 # radiance <-> reflectance
 def radiance2reflectance(radiance, distance, ESUN, solar_angle):
@@ -62,3 +63,29 @@ def get_rad0_rad1(wavelength, solar_zenith, haze=True):
     s.run()
     rad1 = s.outputs.pixel_radiance
     return rad0, rad1
+
+def dis(image):
+    """
+    float -> uint8 이미지 정규화
+    """
+    if image.ndim == 2:
+        img_copy = image.astype(np.float32)
+        if np.max(img_copy) > np.min(img_copy):
+            img_copy = (img_copy - np.min(img_copy)) / (np.max(img_copy) - np.min(img_copy))
+        return (img_copy * 255).astype(np.uint8)
+    elif image.ndim == 3 and image.shape[2] == 3:
+        normalized_channels = []
+        for i in range(3):
+            channel = image[:, :, i].astype(np.float32)
+            if np.max(channel) > np.min(channel):
+                channel = (channel - np.min(channel)) / (np.max(channel) - np.min(channel))
+            else:
+                channel.fill(0)
+            normalized_channels.append(channel * 255)
+        display_image = cv2.merge(normalized_channels)
+        return display_image.astype(np.uint8) 
+    else:
+        try:
+            return cv2.cvtColor(image, cv2.COLOR_RGBA2BGR)
+        except cv2.error:
+            return np.zeros(image.shape[:2], dtype=np.uint8)
