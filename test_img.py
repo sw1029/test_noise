@@ -80,7 +80,7 @@ denoised = {
     "Vignetting": vignetting_denoised_image
 }
 
-# The original image to compare against (normalized to uint8)
+
 origin = src
 
 for name, denoised_img in denoised.items():
