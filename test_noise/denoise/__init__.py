@@ -9,7 +9,7 @@ from .denoiseTerrain import DenoiseTerrain
 atmospher = DenoiseAtmospheric.denoise
 random = DenoiseRandom.denoise
 missingLine = DenoiseMissingLine.denoise
-stripe = DenoiseStripe.denoise
+stripe = DenoiseStripe.denoise_algotom
 sunAngle = DenoiseSunAngle.denoise
 vignetting = DenoiseVignetting.denoise
 terrain = DenoiseTerrain.denoise

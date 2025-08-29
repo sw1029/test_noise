@@ -1,6 +1,7 @@
 from .base import Denoise
 import numpy as np
 import cv2
+from algotom.prep.removal import remove_stripe_based_wavelet_fft
 
 class DenoiseStripe(Denoise):
     @staticmethod
@@ -143,3 +144,27 @@ class DenoiseStripe(Denoise):
             return mat_log
 
         return mag_i**2 
+
+    @staticmethod
+    def denoise_algotom(src: np.ndarray, size: int = 5, level: int = 7) -> np.ndarray:
+        '''
+        오픈소스인 algotom을 이용하여 denoise를 수행합니다.
+        '''
+        if len(src.shape) == 3 and src.shape[2] == 3:
+            b, g, r = cv2.split(src)
+            denoised_b = remove_stripe_based_wavelet_fft(b.astype(np.float32), size=size, level=level)
+            denoised_g = remove_stripe_based_wavelet_fft(g.astype(np.float32), size=size, level=level)
+            denoised_r = remove_stripe_based_wavelet_fft(r.astype(np.float32), size=size, level=level)
+
+            result = cv2.merge([denoised_b, denoised_g, denoised_r])
+            if src.dtype == np.uint8:
+                return np.clip(result, 0, 255).astype(np.uint8)
+            return result
+
+        elif len(src.shape) == 2:
+            denoised_img = remove_stripe_based_wavelet_fft(src.astype(np.float32), size=size, level=level)
+            if src.dtype == np.uint8:
+                return np.clip(denoised_img, 0, 255).astype(np.uint8)
+            return denoised_img
+        else:
+            return src 
