@@ -1,12 +1,12 @@
 from .base import NoiseBase
 import numpy as np
-from ..utils import inverse_Minnaert, DN2radiance, radiance2DN
+from ..utils import inverse_Minnaert, DN2radiance, radiance2DN, angle
 import yaml
 import os
 
 '''
 terrain noise는 Minnaert correction의 역연산을 취하여 구현.
-필요 값: radiance, slope, sun angle, Minnaert 상수
+필요 값: radiance, slope, sun angle, sun azimuth, sun elevation, Minnaert 상수
 이 중 Minnaert 상수와 slope는 임의의 값으로 설정하며, 파라미터 주입을 통하여 조정 가능하도록 구현하였음.
 DEM 기입 시 별도 작동하는 분기를 추가하여 noise를 추가 가능하도록 분기를 구현.
 '''
@@ -14,7 +14,8 @@ DEM 기입 시 별도 작동하는 분기를 추가하여 noise를 추가 가능
 class TerrainNoise(NoiseBase):
     @staticmethod
     def add_noise(src, DEM=None, pixel_size=1.0,
-                  sun_angle=30, factor=0.1, slope=30, max_slope=45,
+                  sun_angle=30, sun_azimuth=225, sun_elevation=45, 
+                  factor=0.1, slope=30, max_slope=45,
                   Minnaert_constant_NIR=0.6,
                   Minnaert_constant_R=0.5,
                   Minnaert_constant_G=0.4,
@@ -23,7 +24,7 @@ class TerrainNoise(NoiseBase):
         
         current_dir = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(current_dir, '..', 'config', yaml_name)
-        
+        _sun_angle = sun_angle
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
         
@@ -42,38 +43,25 @@ class TerrainNoise(NoiseBase):
         terrain_noise_image = src.copy()
 
         if DEM is not None:
-            px, py = np.gradient(DEM)
-            slope = np.arctan(np.sqrt(px**2 + py**2))
-            slope = np.rad2deg(slope)
-
-            np.clip(slope, 0, max_slope, out=slope)
-            _slope = slope / max_slope
-
-            darkening_mask = 1.0 - _slope
-            mask = darkening_mask[:, :, np.newaxis]
-            terrain_noise_image = src * mask
-            
-            terrain_noise_image = src * (1 - factor) + terrain_noise_image * factor
-
-            return terrain_noise_image
+            _sun_angle, _slope = angle(DEM, sun_azimuth, sun_elevation)
         else : _slope = slope    
 
         radiance_B = np.clip(DN2radiance(src[:,:,0], gain_B, offset_B), 0, None)
         radiance_G = np.clip(DN2radiance(src[:,:,1], gain_G, offset_G), 0, None)
         radiance_R = np.clip(DN2radiance(src[:,:,2], gain_R, offset_R), 0, None)
 
-        terrain_noise_image[:, :, 0] = inverse_Minnaert(radiance_B, sun_angle, _slope, Minnaert_constant_B)
+        terrain_noise_image[:, :, 0] = inverse_Minnaert(radiance_B, _sun_angle, _slope, Minnaert_constant_B)
         terrain_noise_image[:, :, 0] = radiance2DN(terrain_noise_image[:, :, 0], gain_B, offset_B)
 
-        terrain_noise_image[:, :, 1] = inverse_Minnaert(radiance_G, sun_angle, _slope, Minnaert_constant_G)
+        terrain_noise_image[:, :, 1] = inverse_Minnaert(radiance_G, _sun_angle, _slope, Minnaert_constant_G)
         terrain_noise_image[:, :, 1] = radiance2DN(terrain_noise_image[:, :, 1], gain_G, offset_G)
 
-        terrain_noise_image[:, :, 2] = inverse_Minnaert(radiance_R, sun_angle, _slope, Minnaert_constant_R)
+        terrain_noise_image[:, :, 2] = inverse_Minnaert(radiance_R, _sun_angle, _slope, Minnaert_constant_R)
         terrain_noise_image[:, :, 2] = radiance2DN(terrain_noise_image[:, :, 2], gain_R, offset_R)
         
         if channels == 4:
             radiance_NIR = DN2radiance(src[:, :, 3], gain_NIR, offset_NIR)
-            terrain_noise_image[:, :, 3] = inverse_Minnaert(radiance_NIR, sun_angle, slope, Minnaert_constant_NIR)
+            terrain_noise_image[:, :, 3] = inverse_Minnaert(radiance_NIR, _sun_angle, _slope, Minnaert_constant_NIR)
             terrain_noise_image[:, :, 3] = radiance_NIR * (1 - factor) + terrain_noise_image[:, :, 3] * factor
             terrain_noise_image[:, :, 3] = radiance2DN(terrain_noise_image[:, :, 3], gain_NIR, offset_NIR)
 
