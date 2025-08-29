@@ -32,11 +32,12 @@ algotom 및 FFT 기반 억제 기법으로 줄무늬 노이즈를 제거합니�
 
 ### Sun Angle Denoise
 ![Sun Angle Denoise](../../output/denoised/sun_angle_denoised_image.png)
-태양 고도에 따른 전역 조도 변화를 역계수로 보정합니다.
+태양 고도에 따른 전역 조도 변화를 absolute correction으로 보정합니다.
 
 ### Terrain Denoise
 ![Terrain Denoise](../../output/denoised/terrain_denoised_image.png)
-Minnaert 보정 또는 C‑correction 기반으로 지형광 영향을 완화합니다.
+Minnaert 보정으로 지형광 영향을 완화합니다.
+[grass gis 공식문서](https://grass.osgeo.org/grass-stable/manuals/i.topo.corr.html) 기반의 topo 보정 기능이 분기로 구현되어 있습니다.
 
 ### Vignetting Denoise
 ![Vignetting Denoise](../../output/denoised/vignetting_denoised_image.png)

@@ -8,7 +8,7 @@
 
 ### Atmospheric Noise
 ![Atmospheric Noise](../../output/noisy/atmosphric_noised_image.png)
-Ls = H · ρ · T + Lp에서 H(total downwelling radiance)는 반사도-라디언스 변환식을 역으로 사용하고, T와 Lp는 Py6S로 계산해 선형 보간 형태로 구현합니다.
+Ls = H · ρ · T + Lp에서 H(total downwelling radiance)는 reflectance, radiance 변환식을 사용하고, T와 Lp는 Py6S로 계산해 선형 보간 형태로 구현합니다.
 
 ### Gaussian Noise
 ![Gaussian Noise](../../output/noisy/gaussian_noised_image.png)
@@ -16,11 +16,11 @@ Ls = H · ρ · T + Lp에서 H(total downwelling radiance)는 반사도-라디�
 
 ### Missing Line Noise
 ![Missing Line Noise](../../output/noisy/missing_line_noised_image.png)
-특정 행/열을 0으로 만들어 센서 라인 누락을 시뮬레이션합니다.
+특정 행/열을 0으로 만들어 노이즈를 구현합니다.
 
 ### Poisson Noise
 ![Poisson Noise](../../output/noisy/poisson_noised_image.png)
-신호 강도에 따라 노이즈가 달라지는 푸아송(샷) 노이즈를 추가합니다.
+신호 강도에 따라 노이즈가 달라지는 푸아송 노이즈를 추가합니다.
 
 ### Salt & Pepper Noise
 ![Salt & Pepper Noise](../../output/noisy/salt_pepper_noised_image.png)
