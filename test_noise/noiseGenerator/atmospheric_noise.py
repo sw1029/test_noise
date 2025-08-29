@@ -136,18 +136,13 @@ class AtmosphericNoise(NoiseBase):
                 new_radiance_NIR = (radiance_NIR / baseNIR) * (rad1_rayleigh_NIR - rad0_rayleigh_NIR) + rad0_rayleigh_NIR
 
 
-        # radiance -> DN 변환 후 0~255 범위 내의 값이 되도록 clipping 수행
-        atmospheric_noise_image[:, :, 0] = np.clip(radiance2DN(new_radiance_B, gain_B, offset_B),
-                                                    0, 255).astype(np.uint8)
-        atmospheric_noise_image[:, :, 1] = np.clip(radiance2DN(new_radiance_G, gain_G, offset_G),
-                                                   0, 255).astype(np.uint8)
-        atmospheric_noise_image[:, :, 2] = np.clip(radiance2DN(new_radiance_R, gain_R, offset_R),
-                                                   0, 255).astype(np.uint8)
+        # radiance -> DN
+        atmospheric_noise_image[:, :, 0] = np.clip(radiance2DN(new_radiance_B, gain_B, offset_B), 0, 255).astype(np.uint8)
+        atmospheric_noise_image[:, :, 1] = np.clip(radiance2DN(new_radiance_G, gain_G, offset_G), 0, 255).astype(np.uint8)
+        atmospheric_noise_image[:, :, 2] = np.clip(radiance2DN(new_radiance_R, gain_R, offset_R), 0, 255).astype(np.uint8)
         if channels == 4:
-            atmospheric_noise_image[:, :, 3] = np.clip(radiance2DN(new_radiance_NIR, gain_NIR, offset_NIR),
-                                                       0, 255).astype(np.uint8)
+            atmospheric_noise_image[:, :, 3] = np.clip(radiance2DN(new_radiance_NIR, gain_NIR, offset_NIR), 0, 255).astype(np.uint8)
 
-        # noise 강도 조절
         atmospheric_noise_image = src * (1 - factor) + atmospheric_noise_image * factor
         atmospheric_noise_image = np.clip(atmospheric_noise_image, 0, 255).astype(np.uint8)
 
