@@ -6,10 +6,10 @@ import os
 
 class DenoiseTerrain(Denoise):
     @staticmethod
-    def denoise(src,
+    def denoise(src, factor = 0.3,
                   sun_angle=30, 
                   DEM=None, pixel_size=1.0,
-                  slope=30, 
+                  slope=30, max_slope = 60,
                   Minnaert_constant_NIR=0.6,
                   Minnaert_constant_R=0.5,
                   Minnaert_constant_G=0.4,
@@ -35,10 +35,21 @@ class DenoiseTerrain(Denoise):
         rows, cols, channels = src.shape
         terrain_denoise_image = src.copy()
 
-        if DEM is not None:
-            px, py = np.gradient(DEM, pixel_size)
+        if DEM is not None: # DEM 이용 단순 보정
+            px, py = np.gradient(DEM)
             _slope = np.arctan(np.sqrt(px**2 + py**2))
-            _slope = np.rad2deg(_slope) 
+            _slope = np.rad2deg(_slope)
+
+            np.clip(_slope, 0, max_slope, out=_slope)
+            _slope = _slope / max_slope
+            
+            mask = 1.0 - _slope
+            mask = mask[:, :, np.newaxis]
+            
+            div = (1 - factor) + (mask * factor)
+            div[div == 0] = 1e-9
+            img = src / div
+            return img
         else : _slope = slope    
         
         # 해당 radiance 값에 음수 clipping 적용 시 단색 이미지가 반환되는 오류가 발생.
@@ -59,5 +70,5 @@ class DenoiseTerrain(Denoise):
             terrain_denoise_image[:, :, 3] = Minnaert(radiance_NIR, sun_angle, _slope, Minnaert_constant_NIR)
             terrain_denoise_image[:, :, 3] = radiance2DN(terrain_denoise_image[:, :, 3], gain_NIR, offset_NIR)
        
-        terrain_denoise_image = np.clip(terrain_denoise_image, 0, 255).astype(np.uint8)
+        terrain_denoise_image = np.nan_to_num(terrain_denoise_image)
         return terrain_denoise_image
