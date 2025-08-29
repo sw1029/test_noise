@@ -64,6 +64,7 @@ terrain_denoised_image = terrainTopo(
     DEM=dem_cv2,
     sun_azimuth=225,
     sun_elevation=45,
+    method="minnaert",
     mode="luminance",
     scale_clip=(0.8, 1.2),
     shadow_thresh=0.2,
