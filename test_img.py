@@ -40,10 +40,10 @@ if np.isnan(dem_array).any():
 img = cv2.cvtColor(rgb_cv2.astype(np.float32), cv2.COLOR_RGB2BGR)
 
 img = cv2.cvtColor(rgb_cv2.astype(np.float32), cv2.COLOR_RGB2BGR)
-src = dis(img)
+#src = dis(img)
 
-#src = cv2.imread(image_path) #필요시 테스트용으로 아래의 주석과 함께 활성화.
-#dem_cv2 = None
+src = cv2.imread(image_path) #필요시 테스트용으로 아래의 주석과 함께 활성화.
+dem_cv2 = None
 
 # Noise 추가
 terrain_noised_image = terrainNoise(src, factor=0.7, DEM=dem_cv2)
