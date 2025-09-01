@@ -30,7 +30,8 @@ dependencies = [
     "six",
     "scikit-image",
     "imutils",
-    "rasterio"
+    "rasterio",
+    "tqdm"
 ]
 
 [tool.setuptools.packages.find]
