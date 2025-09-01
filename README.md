@@ -110,3 +110,51 @@ striping_param = evaluate(striping_noised_image, 0.1, metric="rmse")
 sun_angle_param = evaluate(sun_angle_noised_image, 0.1, metric="rmse")
 vignetting_param = evaluate(vignetting_noised_image, 0.1, metric="rmse")
 ```
+
+### 시각적 비교
+아래는 `test_img.py`에서 사용한 원본 이미지(`input_images/P0000__512__2304___1536.png`)와 각 노이즈 유형별로 생성된 Noisy 이미지를 나란히 비교한 예시입니다.
+
+#### Terrain
+| 원본(Original) | Noisy |
+| --- | --- |
+| ![Original](input_images/P0000__512__2304___1536.png) | ![Terrain Noisy](output/noisy/terrain_noised_image.png) |
+
+#### Atmospheric
+| 원본(Original) | Noisy |
+| --- | --- |
+| ![Original](input_images/P0000__512__2304___1536.png) | ![Atmospheric Noisy](output/noisy/atmosphric_noised_image.png) |
+
+#### Gaussian
+| 원본(Original) | Noisy |
+| --- | --- |
+| ![Original](input_images/P0000__512__2304___1536.png) | ![Gaussian Noisy](output/noisy/gaussian_noised_image.png) |
+
+#### Missing Line
+| 원본(Original) | Noisy |
+| --- | --- |
+| ![Original](input_images/P0000__512__2304___1536.png) | ![Missing Line Noisy](output/noisy/missing_line_noised_image.png) |
+
+#### Salt & Pepper
+| 원본(Original) | Noisy |
+| --- | --- |
+| ![Original](input_images/P0000__512__2304___1536.png) | ![Salt & Pepper Noisy](output/noisy/salt_pepper_noised_image.png) |
+
+#### Poisson
+| 원본(Original) | Noisy |
+| --- | --- |
+| ![Original](input_images/P0000__512__2304___1536.png) | ![Poisson Noisy](output/noisy/poisson_noised_image.png) |
+
+#### Striping
+| 원본(Original) | Noisy |
+| --- | --- |
+| ![Original](input_images/P0000__512__2304___1536.png) | ![Striping Noisy](output/noisy/striping_noised_image.png) |
+
+#### Sun Angle
+| 원본(Original) | Noisy |
+| --- | --- |
+| ![Original](input_images/P0000__512__2304___1536.png) | ![Sun Angle Noisy](output/noisy/sun_angle_noised_image.png) |
+
+#### Vignetting
+| 원본(Original) | Noisy |
+| --- | --- |
+| ![Original](input_images/P0000__512__2304___1536.png) | ![Vignetting Noisy](output/noisy/vignetting_noised_image.png) |
