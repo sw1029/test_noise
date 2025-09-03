@@ -13,14 +13,14 @@
 Ls = H · ρ · T + Lp에서 H(total downwelling radiance)는 reflectance, radiance 변환식을 사용하고, T와 Lp는 Py6S로 계산해 선형 보간 형태로 구현합니다.
 
  - 지표(원본↔노이즈)
-   - SSIM=0.985, PSNR=44.28 dB, RMSE=1.56, MAE=1.25
+   - SSIM=0.982, PSNR=42.13 dB, RMSE=2.00, MAE=1.60
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Original](../../output/noisy/tif_original.png) | ![Atmospheric Noise](../../output/noisy/tif_atmosphric_noised_image.png) |
 
  - 지표(원본↔노이즈)
-   - SSIM=0.378, PSNR=13.71 dB, RMSE=52.63, MAE=44.98
+   - SSIM=0.999, PSNR=47.42 dB, RMSE=1.09, MAE=0.68
 
  - Parameters: `factor=0.7`, `haze=True`, `rayleigh=True`, `yaml_name="KOMPSAT.yaml"`, `sun_angle=30`
  - Defaults: `factor=0.1`, `haze=True`, `rayleigh=True`, `yaml_name="KOMPSAT.yaml"`, `sun_angle=30`
@@ -41,14 +41,14 @@ Ls = H · ρ · T + Lp에서 H(total downwelling radiance)는 reflectance, radia
 이미지 전체에 정규 분포(가우시안 분포)를 따르는 랜덤 노이즈를 추가합니다.
 
  - 지표(원본↔노이즈)
-   - SSIM=0.587, PSNR=25.16 dB, RMSE=14.08, MAE=11.39
+   - SSIM=0.587, PSNR=24.88 dB, RMSE=14.54, MAE=11.75
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Original](../../output/noisy/tif_original.png) | ![Gaussian Noise](../../output/noisy/tif_gaussian_noised_image.png) |
 
  - 지표(원본↔노이즈)
-   - SSIM=0.839, PSNR=32.03 dB, RMSE=6.38, MAE=4.86
+   - SSIM=0.625, PSNR=20.32 dB, RMSE=24.57, MAE=12.31
  - Parameters: (default)
  - Defaults: `mean=0`, `var=50`
  - 파라미터 의미
@@ -64,14 +64,14 @@ Ls = H · ρ · T + Lp에서 H(total downwelling radiance)는 reflectance, radia
 특정 행/열을 0으로 만들어 노이즈를 구현합니다.
 
  - 지표(원본↔노이즈)
-   - SSIM=0.847, PSNR=16.93 dB, RMSE=36.31, MAE=30.45
+   - SSIM=0.854, PSNR=16.99 dB, RMSE=36.07, MAE=30.30
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Original](../../output/noisy/tif_original.png) | ![Missing Line Noise](../../output/noisy/tif_missing_line_noised_image.png) |
 
  - 지표(원본↔노이즈)
-   - SSIM=0.985, PSNR=31.88 dB, RMSE=6.50, MAE=0.41
+   - SSIM=0.636, PSNR=4.89 dB, RMSE=145.15, MAE=83.84
  - Parameters: (default)
  - Defaults: `num_threshold=10`, `len_threshold=512`
  - 파라미터 의미
@@ -88,14 +88,14 @@ Ls = H · ρ · T + Lp에서 H(total downwelling radiance)는 reflectance, radia
 신호 강도에 따라 노이즈가 달라지는 푸아송 노이즈를 추가합니다.
 
  - 지표(원본↔노이즈)
-   - SSIM=0.949, PSNR=39.04 dB, RMSE=2.85, MAE=1.57
+   - SSIM=0.948, PSNR=38.91 dB, RMSE=2.89, MAE=1.58
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Original](../../output/noisy/tif_original.png) | ![Poisson Noise](../../output/noisy/tif_poisson_noised_image.png) |
 
  - 지표(원본↔노이즈)
-   - SSIM=0.992, PSNR=40.90 dB, RMSE=2.30, MAE=0.81
+   - SSIM=0.665, PSNR=13.22 dB, RMSE=55.66, MAE=25.68
  - Parameters: (default)
  - Defaults: `factor=0.1`
  - 파라미터 의미
@@ -110,14 +110,14 @@ Ls = H · ρ · T + Lp에서 H(total downwelling radiance)는 reflectance, radia
 일부 픽셀을 0 또는 255로 치환하는 소금·후추 노이즈를 적용합니다.
 
  - 지표(원본↔노이즈)
-   - SSIM=0.509, PSNR=16.22 dB, RMSE=39.41, MAE=31.66
+   - SSIM=0.512, PSNR=16.22 dB, RMSE=39.41, MAE=31.67
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Original](../../output/noisy/tif_original.png) | ![Salt & Pepper Noise](../../output/noisy/tif_salt_pepper_noised_image.png) |
 
  - 지표(원본↔노이즈)
-   - SSIM=0.754, PSNR=21.23 dB, RMSE=22.12, MAE=2.51
+   - SSIM=0.752, PSNR=21.26 dB, RMSE=22.06, MAE=2.51
  - Parameters: (default)
  - Defaults: `s_vs_p=0.5`, `amount=0.02`
  - 파라미터 의미
@@ -133,14 +133,14 @@ Ls = H · ρ · T + Lp에서 H(total downwelling radiance)는 reflectance, radia
 사인파 패턴을 더해 가로/세로 줄무늬를 만듭니다.
 
  - 지표(원본↔노이즈)
-   - SSIM=0.721, PSNR=28.82 dB, RMSE=9.24, MAE=7.58
+   - SSIM=0.742, PSNR=29.30 dB, RMSE=8.74, MAE=7.31
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Original](../../output/noisy/tif_original.png) | ![Striping Noise](../../output/noisy/tif_striping_noised_image.png) |
 
  - 지표(원본↔노이즈)
-   - SSIM=0.879, PSNR=33.63 dB, RMSE=5.31, MAE=4.41
+   - SSIM=0.646, PSNR=11.66 dB, RMSE=66.57, MAE=28.83
  - Parameters: (default)
  - Defaults: `noise_strength=10`, `stripe_width=2`, `direction="horizontal"`
  - 파라미터 의미
@@ -181,14 +181,14 @@ Ls = H · ρ · T + Lp에서 H(total downwelling radiance)는 reflectance, radia
 Minnaert 역연산 기반으로 구현되며, DEM 입력 시 경사/입사각을 반영합니다.
 
  - 지표(원본↔노이즈)
-   - SSIM=0.761, PSNR=10.09 dB, RMSE=79.78, MAE=71.48
+   - SSIM=0.985, PSNR=44.28 dB, RMSE=1.56, MAE=1.25
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Original](../../output/noisy/tif_original.png) | ![Terrain Noise](../../output/noisy/tif_terrain_noised_image.png) |
 
  - 지표(원본↔노이즈)
-   - SSIM=0.378, PSNR=13.71 dB, RMSE=52.63, MAE=44.98
+   - SSIM=0.999, PSNR=49.27 dB, RMSE=0.88, MAE=0.55
  - Parameters: `factor=0.7`, `DEM=None`
  - Defaults: `pixel_size=1.0`, `sun_angle=30`, `sun_azimuth=225`, `sun_elevation=45`, `slope=30`, `max_slope=45`, `Minnaert_constant_NIR=0.6`, `Minnaert_constant_R=0.5`, `Minnaert_constant_G=0.4`, `Minnaert_constant_B=0.3`, `yaml_name="KOMPSAT.yaml"`
  - 파라미터 의미
@@ -237,7 +237,7 @@ Minnaert 역연산 기반으로 구현되며, DEM 입력 시 경사/입사각을
 | ![Original](../../output/noisy/tif_original.png) | ![Vignetting Noise](../../output/noisy/tif_vignetting_noised_image.png) |
 
  - 지표(원본↔노이즈)
-   - SSIM=0.879, PSNR=19.60 dB, RMSE=26.71, MAE=15.17
+   - SSIM=0.605, PSNR=5.20 dB, RMSE=140.17, MAE=89.71
 
  - 파라미터 의미
    - strength: 중심 대비 가장자리 감쇠 강도(0~1). 값이 클수록 가장자리가 더 어두워짐

@@ -20,8 +20,8 @@
 | --- | --- |
 | ![Atmospheric Noisy](../../output/noisy/tif_atmosphric_noised_image.png) | ![Atmospheric Denoised](../../output/denoised/tif_atmospheric_denoised_image.png) |
 
-- 지표(원본↔복원): SSIM=0.369, PSNR=11.35 dB, RMSE=69.00, MAE=63.90
-- 참고(원본↔노이즈): SSIM=0.260, PSNR=4.91 dB, RMSE=144.91, MAE=138.90
+- 지표(원본↔복원): SSIM=0.998, PSNR=44.02 dB, RMSE=1.61, MAE=1.06
+- 참고(원본↔노이즈): SSIM=0.999, PSNR=47.42 dB, RMSE=1.09, MAE=0.68
 
 - Parameters (defaults): `factor=0.3`, `haze=True`, `rayleigh=True`, `yaml_name="KOMPSAT.yaml"`, `sun_angle=30`
 - 파라미터 의미
@@ -41,16 +41,16 @@
 `cv2.GaussianBlur`를 사용해 가우시안 노이즈를 저감합니다.
   - 아주 작은 무늬는 조금 부드러워질 수 있으나 윤곽선은 비교적 유지됨
 
-- 지표(원본↔복원): SSIM=0.851, PSNR=31.29 dB, RMSE=6.95, MAE=4.78
-- 참고(원본↔노이즈): SSIM=0.587, PSNR=25.16 dB, RMSE=14.08, MAE=11.39
-- 개선(복원−노이즈): dSSIM=0.264, dPSNR=6.14 dB, dRMSE=7.14, dMAE=6.61
+- 지표(원본↔복원): SSIM=0.848, PSNR=31.12 dB, RMSE=7.09, MAE=4.94
+- 참고(원본↔노이즈): SSIM=0.587, PSNR=24.88 dB, RMSE=14.54, MAE=11.75
+- 개선(복원−노이즈): dSSIM=0.261, dPSNR=6.24 dB, dRMSE=7.45, dMAE=6.81
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Gaussian Noisy](../../output/noisy/tif_gaussian_noised_image.png) | ![Gaussian Denoised](../../output/denoised/tif_gaussian_denoised_image.png) |
 
-- 지표(원본↔복원): SSIM=0.833, PSNR=30.18 dB, RMSE=7.90, MAE=5.27
-- 참고(원본↔노이즈): SSIM=0.839, PSNR=32.03 dB, RMSE=6.38, MAE=4.86
+- 지표(원본↔복원): SSIM=0.648, PSNR=23.47 dB, RMSE=17.10, MAE=9.36
+- 참고(원본↔노이즈): SSIM=0.625, PSNR=20.32 dB, RMSE=24.57, MAE=12.31
 
 ### Missing Line Denoise
 | 적용 전 | 적용 후 |
@@ -58,16 +58,16 @@
 | ![Missing Line Noisy](../../output/noisy/missing_line_noised_image.png) | ![Missing Line Denoised](../../output/denoised/missing_denoised_image.png) |
 `skimage.restoration.inpaint_biharmonic`으로 라인 누락 영역을 보간합니다.
 
-- 지표(원본↔복원): SSIM=0.999, PSNR=56.63 dB, RMSE=0.38, MAE=0.09
-- 참고(원본↔노이즈): SSIM=0.847, PSNR=16.93 dB, RMSE=36.31, MAE=30.45
-- 개선(복원−노이즈): dSSIM=0.152, dPSNR=39.70 dB, dRMSE=35.93, dMAE=30.36
+- 지표(원본↔복원): SSIM=0.999, PSNR=56.29 dB, RMSE=0.39, MAE=0.10
+- 참고(원본↔노이즈): SSIM=0.854, PSNR=16.99 dB, RMSE=36.07, MAE=30.30
+- 개선(복원−노이즈): dSSIM=0.145, dPSNR=39.30 dB, dRMSE=35.68, dMAE=30.20
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Missing Line Noisy](../../output/noisy/tif_missing_line_noised_image.png) | ![Missing Line Denoised](../../output/denoised/tif_missing_denoised_image.png) |
 
-- 지표(원본↔복원): SSIM=0.999, PSNR=45.87 dB, RMSE=1.30, MAE=0.13
-- 참고(원본↔노이즈): SSIM=0.985, PSNR=31.88 dB, RMSE=6.50, MAE=0.41
+- 지표(원본↔복원): SSIM=0.998, PSNR=42.34 dB, RMSE=1.95, MAE=0.21
+- 참고(원본↔노이즈): SSIM=0.636, PSNR=4.89 dB, RMSE=145.15, MAE=83.84
 
 ### Poisson Denoise
 | 적용 전 | 적용 후 |
@@ -75,16 +75,16 @@
 | ![Poisson Noisy](../../output/noisy/poisson_noised_image.png) | ![Poisson Denoised](../../output/denoised/poisson_denoised_image.png) |
 `cv2.medianBlur`로 샷 노이즈를 억제합니다.
 
-- 지표(원본↔복원): SSIM=0.747, PSNR=19.77 dB, RMSE=26.18, MAE=23.52
-- 참고(원본↔노이즈): SSIM=0.949, PSNR=39.04 dB, RMSE=2.85, MAE=1.57
-- 개선(복원−노이즈): dSSIM=-0.202, dPSNR=-19.27 dB, dRMSE=-23.34, dMAE=-21.95
+- 지표(원본↔복원): SSIM=0.748, PSNR=20.11 dB, RMSE=25.18, MAE=22.29
+- 참고(원본↔노이즈): SSIM=0.948, PSNR=38.91 dB, RMSE=2.89, MAE=1.58
+- 개선(복원−노이즈): dSSIM=-0.200, dPSNR=-18.80 dB, dRMSE=-22.29, dMAE=-20.71
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Poisson Noisy](../../output/noisy/tif_poisson_noised_image.png) | ![Poisson Denoised](../../output/denoised/tif_poisson_denoised_image.png) |
 
-- 지표(원본↔복원): SSIM=0.696, PSNR=24.30 dB, RMSE=15.54, MAE=9.09
-- 참고(원본↔노이즈): SSIM=0.992, PSNR=40.90 dB, RMSE=2.30, MAE=0.81
+- 지표(원본↔복원): SSIM=0.695, PSNR=24.26 dB, RMSE=15.62, MAE=9.23
+- 참고(원본↔노이즈): SSIM=0.665, PSNR=13.22 dB, RMSE=55.66, MAE=25.68
 
 ### Salt & Pepper Denoise
 | 적용 전 | 적용 후 |
@@ -92,16 +92,16 @@
 | ![Salt & Pepper Noisy](../../output/noisy/salt_pepper_noised_image.png) | ![Salt & Pepper Denoised](../../output/denoised/salt_pepper_denoised_image.png) |
 `cv2.medianBlur`로 소금·후추 노이즈를 제거합니다.
 
-- 지표(원본↔복원): SSIM=0.983, PSNR=39.77 dB, RMSE=2.62, MAE=1.85
-- 참고(원본↔노이즈): SSIM=0.509, PSNR=16.22 dB, RMSE=39.41, MAE=31.66
-- 개선(복원−노이즈): dSSIM=0.474, dPSNR=23.55 dB, dRMSE=36.80, dMAE=29.81
+- 지표(원본↔복원): SSIM=0.983, PSNR=39.79 dB, RMSE=2.61, MAE=1.85
+- 참고(원본↔노이즈): SSIM=0.512, PSNR=16.22 dB, RMSE=39.41, MAE=31.67
+- 개선(복원−노이즈): dSSIM=0.472, dPSNR=23.57 dB, dRMSE=36.80, dMAE=29.82
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Salt & Pepper Noisy](../../output/noisy/tif_salt_pepper_noised_image.png) | ![Salt & Pepper Denoised](../../output/denoised/tif_salt_pepper_denoised_image.png) |
 
-- 지표(원본↔복원): SSIM=0.859, PSNR=24.83 dB, RMSE=14.63, MAE=6.81
-- 참고(원본↔노이즈): SSIM=0.754, PSNR=21.23 dB, RMSE=22.12, MAE=2.51
+- 지표(원본↔복원): SSIM=0.860, PSNR=24.86 dB, RMSE=14.58, MAE=6.78
+- 참고(원본↔노이즈): SSIM=0.752, PSNR=21.26 dB, RMSE=22.06, MAE=2.51
 
 ### Striping Denoise
 | 적용 전 | 적용 후 |
@@ -109,16 +109,16 @@
 | ![Striping Noisy](../../output/noisy/striping_noised_image.png) | ![Striping Denoised](../../output/denoised/striping_denoised_image.png) |
 algotom 및 FFT 기반 억제 기법으로 줄무늬 노이즈를 제거합니다.
 
-- 지표(원본↔복원): SSIM=0.701, PSNR=25.63 dB, RMSE=13.34, MAE=10.27
-- 참고(원본↔노이즈): SSIM=0.721, PSNR=28.82 dB, RMSE=9.24, MAE=7.58
-- 개선(복원−노이즈): dSSIM=-0.020, dPSNR=-3.19 dB, dRMSE=-4.10, dMAE=-2.70
+- 지표(원본↔복원): SSIM=0.721, PSNR=25.35 dB, RMSE=13.77, MAE=10.65
+- 참고(원본↔노이즈): SSIM=0.742, PSNR=29.30 dB, RMSE=8.74, MAE=7.31
+- 개선(복원−노이즈): dSSIM=-0.021, dPSNR=-3.95 dB, dRMSE=-5.03, dMAE=-3.34
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Striping Noisy](../../output/noisy/tif_striping_noised_image.png) | ![Striping Denoised](../../output/denoised/tif_striping_denoised_image.png) |
 
-- 지표(원본↔복원): SSIM=0.862, PSNR=29.41 dB, RMSE=8.63, MAE=6.30
-- 참고(원본↔노이즈): SSIM=0.879, PSNR=33.63 dB, RMSE=5.31, MAE=4.41
+- 지표(원본↔복원): SSIM=0.622, PSNR=12.48 dB, RMSE=60.64, MAE=27.87
+- 참고(원본↔노이즈): SSIM=0.646, PSNR=11.66 dB, RMSE=66.57, MAE=28.83
 
 - Parameters (defaults): `size=5`, `level=7` (algotom wavelet-FFT)
 - 파라미터 의미
@@ -143,7 +143,7 @@ algotom 및 FFT 기반 억제 기법으로 줄무늬 노이즈를 제거합니�
 | --- | --- |
 | ![Sun Angle Noisy](../../output/noisy/tif_sun_angle_noised_image.png) | ![Sun Angle Denoised](../../output/denoised/tif_sun_angle_denoised_image.png) |
 
-- 지표(원본↔복원): SSIM=0.947, PSNR=24.70 dB, RMSE=14.85, MAE=10.55
+- 지표(원본↔복원): SSIM=0.936, PSNR=18.85 dB, RMSE=29.10, MAE=20.00
 - 참고(원본↔노이즈): SSIM=0.934, PSNR=18.72 dB, RMSE=29.56, MAE=20.50
 
 - Parameters (defaults): `sunAngle=45`, `intensity=0.5`, `gamma=1.0`
@@ -163,18 +163,18 @@ algotom 및 FFT 기반 억제 기법으로 줄무늬 노이즈를 제거합니�
 Minnaert 보정으로 지형광 영향을 완화합니다.
 [grass gis 공식문서](https://grass.osgeo.org/grass-stable/manuals/i.topo.corr.html), [geeguide](https://github.com/ndminhhus/geeguide/blob/master/04.topo_correction.md) 기반의 topo 보정 기능이 분기로 구현되어 있습니다.
 
-- 지표(원본↔복원): SSIM=0.392, PSNR=5.86 dB, RMSE=129.90, MAE=116.34
-- 참고(원본↔노이즈): SSIM=0.761, PSNR=10.09 dB, RMSE=79.78, MAE=71.48
-- 개선(복원−노이즈): dSSIM=-0.369, dPSNR=-4.23 dB, dRMSE=-50.12, dMAE=-44.86
+- 지표(원본↔복원): SSIM=0.975, PSNR=39.06 dB, RMSE=2.84, MAE=2.15
+- 참고(원본↔노이즈): SSIM=0.985, PSNR=44.28 dB, RMSE=1.56, MAE=1.25
+- 개선(복원−노이즈): dSSIM=-0.009, dPSNR=-5.22 dB, dRMSE=-1.28, dMAE=-0.91
 
 | 적용 전 | 적용 후 |
 | --- | --- |
 | ![Terrain Noisy](../../output/noisy/tif_terrain_noised_image.png) | ![Terrain Denoised](../../output/denoised/tif_terrain_denoised_image.png) |
 
-- 지표(원본↔복원): SSIM=0.371, PSNR=13.71 dB, RMSE=52.59, MAE=44.98
-- 참고(원본↔노이즈): SSIM=0.378, PSNR=13.71 dB, RMSE=52.63, MAE=44.98
+- 지표(원본↔복원): SSIM=0.655, PSNR=8.28 dB, RMSE=98.33, MAE=48.11
+- 참고(원본↔노이즈): SSIM=0.999, PSNR=49.27 dB, RMSE=0.88, MAE=0.55
 
-- Parameters: `DEM=None`, `sun_azimuth=225`, `sun_elevation=45`, `method="minnaert"`, `mode="luminance"`, `scale_clip=(0.8, 1.2)`, `shadow_thresh=0.2`, `robust=True`, `ransac_iter=300`, `inlier_sigma=2.0`
+- Parameters: `DEM=None`, `sun_azimuth=225`, `sun_elevation=45`, `pixel_size=1.0`, `method="minnaert"`, `mode="luminance"`, `scale_clip=(0.8, 1.2)`, `shadow_thresh=0.2`, `robust=True`, `ransac_iter=300`, `inlier_sigma=2.0`, `mask=None`
 - Defaults: `eps=1e-3`, `sample_max=200000`, `mode="luminance"`, `method="c"`, `scale_clip=(0.5, 1.5)`, `shadow_thresh=0.2`, `robust=True`, `ransac_iter=200`, `inlier_sigma=2.5`
 
 참고: 비-topo 경로(`terrain(...)`)는 Minnaert 파라미터 기반 보정을 수행하며, 본 샘플에서는 `terrainTopo(...)`만 사용했습니다.
@@ -182,13 +182,15 @@ Minnaert 보정으로 지형광 영향을 완화합니다.
 - 파라미터 의미
   - DEM: 지형 경사/입사각 계산에 사용하는 고도 격자
   - sun_azimuth/sun_elevation: 태양 방위/고도(도). 입사각 산정에 사용
-  - method: 보정 방식 선택(예: c-correction, minnaert)
-  - mode: 스케일 추정 기준(luminance 기반 또는 channel)
+  - pixel_size: DEM 픽셀 간격(dy, dx) 또는 스칼라. 경사 계산에 반영
+  - method: 보정 방식 선택(예: c, c-luminance, c-per_channel, minnaert)
+  - mode: (하위호환) c 방식에서 스케일 추정 기준(luminance 또는 per_channel)
   - scale_clip: 보정 스케일 하한/상한(과보정을 방지)
   - shadow_thresh: 그림자(낮은 입사각) 보호 임계값
   - robust: RANSAC 등 강건 회귀 사용 여부
   - ransac_iter: RANSAC 반복 횟수(표본 추출 횟수)
   - inlier_sigma: 인라이어 판정 기준(표준편차 배수)
+  - mask: 유효 픽셀(True) 마스크. 회귀/적용에서 제외할 영역 지정 가능
 
 - 시각적 효과
   - 산면·경사면의 밝기 차이가 줄어 색과 밝기가 더 균일해 보임
@@ -208,8 +210,8 @@ Minnaert 보정으로 지형광 영향을 완화합니다.
 | --- | --- |
 | ![Vignetting Noisy](../../output/noisy/tif_vignetting_noised_image.png) | ![Vignetting Denoised](../../output/denoised/tif_vignetting_denoised_image.png) |
 
-- 지표(원본↔복원): SSIM=0.961, PSNR=45.77 dB, RMSE=1.31, MAE=1.21
-- 참고(원본↔노이즈): SSIM=0.879, PSNR=19.60 dB, RMSE=26.71, MAE=15.17
+- 지표(원본↔복원): SSIM=0.687, PSNR=5.36 dB, RMSE=137.61, MAE=75.75
+- 참고(원본↔노이즈): SSIM=0.605, PSNR=5.20 dB, RMSE=140.17, MAE=89.71
 
 - Parameters (defaults): `strength=0.4`, `power=2.3`
 - 파라미터 의미
