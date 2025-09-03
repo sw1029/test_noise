@@ -32,16 +32,19 @@ class DenoiseTerrain(Denoise):
         offset_NIR = band_params.get('nir', {}).get('offset')
 
         rows, cols, channels = src.shape
-        terrain_denoise_image = src.copy()
+        orig_dtype = src.dtype
+        img = src.astype(np.float32, copy=False)
+        terrain_denoise_image = img.copy()
 
         if DEM is not None: # DEM 이용 단순 보정
-            _sun_angle, _slope = angle(DEM, sun_azimuth, sun_elevation)
-        else : _slope = slope    
+            _sun_angle, _slope = angle(DEM, sun_azimuth, sun_elevation, pixel_size=pixel_size)
+        else:
+            _slope = slope
         
         # 해당 radiance 값에 음수 clipping 적용 시 단색 이미지가 반환되는 오류가 발생.
-        radiance_B = DN2radiance(src[:,:,0], gain_B, offset_B)
-        radiance_G = DN2radiance(src[:,:,1], gain_G, offset_G)
-        radiance_R = DN2radiance(src[:,:,2], gain_R, offset_R)
+        radiance_B = DN2radiance(img[:,:,0], gain_B, offset_B)
+        radiance_G = DN2radiance(img[:,:,1], gain_G, offset_G)
+        radiance_R = DN2radiance(img[:,:,2], gain_R, offset_R)
 
         terrain_denoise_image[:, :, 0] = Minnaert(radiance_B, _sun_angle, _slope, Minnaert_constant_B)
         terrain_denoise_image[:, :, 1] = Minnaert(radiance_G, _sun_angle, _slope, Minnaert_constant_G)
@@ -52,17 +55,24 @@ class DenoiseTerrain(Denoise):
         terrain_denoise_image[:, :, 2] = radiance2DN(terrain_denoise_image[:, :, 2], gain_R, offset_R)
         
         if channels == 4:
-            radiance_NIR = DN2radiance(src[:, :, 3], gain_NIR, offset_NIR)
+            radiance_NIR = DN2radiance(img[:, :, 3], gain_NIR, offset_NIR)
             terrain_denoise_image[:, :, 3] = Minnaert(radiance_NIR, _sun_angle, _slope, Minnaert_constant_NIR)
             terrain_denoise_image[:, :, 3] = radiance2DN(terrain_denoise_image[:, :, 3], gain_NIR, offset_NIR)
        
+        # 안전한 범위/타입으로 반환
         terrain_denoise_image = np.nan_to_num(terrain_denoise_image)
+        if np.issubdtype(orig_dtype, np.integer):
+            info = np.iinfo(orig_dtype)
+            terrain_denoise_image = np.clip(terrain_denoise_image, info.min, info.max).astype(orig_dtype)
+        else:
+            terrain_denoise_image = terrain_denoise_image.astype(np.float32)
         return terrain_denoise_image
     @staticmethod
     def denoise_topo(src: np.ndarray,
                      DEM: np.ndarray | None = None,
                      sun_azimuth: float = 225.0,
                      sun_elevation: float = 45.0,
+                     pixel_size: float | tuple[float, float] = 1.0,
                      eps: float = 1e-3,
                      sample_max: int = 200_000,
                      mode: str = "luminance",
@@ -71,7 +81,8 @@ class DenoiseTerrain(Denoise):
                      shadow_thresh: float | None = 0.2,
                      robust: bool = True,
                      ransac_iter: int = 200,
-                     inlier_sigma: float = 2.5) -> np.ndarray:
+                     inlier_sigma: float = 2.5,
+                     mask: np.ndarray | None = None) -> np.ndarray:
         """
         C-correction 기반 지형 보정(게인/오프셋 불요): DenoiseTerrain 보조 함수
         - 휘도 기반 단일 스케일 또는 채널별(per_channel) 방식 선택
@@ -87,11 +98,16 @@ class DenoiseTerrain(Denoise):
         orig_dtype = src.dtype
         img = src.astype(np.float32, copy=False)
 
-        i_deg, _ = angle(DEM, sun_azimuth, sun_elevation)
+        i_deg, _ = angle(DEM, sun_azimuth, sun_elevation, pixel_size=pixel_size)
         cosI = np.cos(np.deg2rad(i_deg))
         cosZ = np.sin(np.deg2rad(sun_elevation))
 
         valid = np.isfinite(cosI) & (cosI > eps)
+        if mask is not None:
+            try:
+                valid &= mask.astype(bool)
+            except Exception:
+                pass
         if not np.any(valid):
             return src
 
@@ -108,7 +124,51 @@ class DenoiseTerrain(Denoise):
         X = np.concatenate([cosI_s, np.ones_like(cosI_s)], axis=1)  # [cosI, 1]
         XtX = X.T @ X
 
-        if method.lower() == "minnaert":
+        def fit_ab(Xm: np.ndarray, ym: np.ndarray) -> tuple[float, float]:
+            # y = a*cosI + b 선형 적합
+            if not robust:
+                try:
+                    beta = np.linalg.solve(XtX, X.T @ ym)
+                    return float(beta[0]), float(beta[1])
+                except np.linalg.LinAlgError:
+                    return 1.0, 0.0
+            # RANSAC
+            try:
+                beta_ols = np.linalg.solve(XtX, X.T @ ym)
+            except np.linalg.LinAlgError:
+                beta_ols = np.array([[1.0], [0.0]], dtype=np.float32)
+            a_best = float(beta_ols[0]); b_best = float(beta_ols[1])
+            inliers_best = np.ones(ym.shape[0], dtype=bool)
+            rng = np.random.default_rng(0)
+            n = ym.shape[0]
+            for _ in range(ransac_iter):
+                if n < 2:
+                    break
+                idx2 = rng.choice(n, size=2, replace=False)
+                X2 = X[idx2]
+                y2 = ym[idx2]
+                try:
+                    beta2 = np.linalg.solve(X2, y2)
+                    a2 = float(beta2[0]); b2 = float(beta2[1])
+                except np.linalg.LinAlgError:
+                    continue
+                resid = (X @ beta2 - ym).ravel()
+                std = float(np.std(resid)) + 1e-6
+                thr = inlier_sigma * std
+                inliers = np.abs(resid) <= thr
+                if inliers.sum() > inliers_best.sum():
+                    inliers_best = inliers
+                    a_best, b_best = a2, b2
+            try:
+                Xin = X[inliers_best]
+                yin = ym[inliers_best]
+                beta = np.linalg.solve(Xin.T @ Xin, Xin.T @ yin)
+                return float(beta[0]), float(beta[1])
+            except np.linalg.LinAlgError:
+                return a_best, b_best
+
+        method_l = (method or "").lower()
+        if method_l == "minnaert":
             # Minnaert 보정: Lcorr = L * (cosZ / cosI)^k, k는 회귀로 추정 (휘도 기반)
             if C >= 3:
                 Y = 0.114 * img[..., 0] + 0.587 * img[..., 1] + 0.299 * img[..., 2]
@@ -138,15 +198,11 @@ class DenoiseTerrain(Denoise):
             for ch in range(C):
                 out[..., ch] = img[..., ch] * scale
 
-        elif mode == "per_channel":
+        elif method_l in ("c-per_channel", "per_channel") or (method_l not in ("c", "c-luminance") and mode == "per_channel"):
             for ch in range(C):
                 L = img[..., ch]
                 y = L.ravel()[sel].reshape(-1, 1)
-                try:
-                    beta = np.linalg.solve(XtX, X.T @ y)
-                    a = float(beta[0]); b = float(beta[1])
-                except np.linalg.LinAlgError:
-                    a, b = 1.0, 0.0
+                a, b = fit_ab(X, y)
 
                 c = max((b / a) if abs(a) > eps else 0.0, 0.0)
                 denom = cosI + c
@@ -158,54 +214,14 @@ class DenoiseTerrain(Denoise):
                     smin, smax = scale_clip
                     scale = np.clip(scale, smin, smax)
                 out[..., ch] = L * scale
-        else:
+        else:  # C-correction, luminance 기반
             # 휘도 기반(색 보존)
             if C >= 3:
                 Y = 0.114 * img[..., 0] + 0.587 * img[..., 1] + 0.299 * img[..., 2]
             else:
                 Y = img[..., 0]
             y = Y.ravel()[sel].reshape(-1, 1)
-
-            if robust:
-                try:
-                    beta_ols = np.linalg.solve(XtX, X.T @ y)
-                except np.linalg.LinAlgError:
-                    beta_ols = np.array([[1.0], [0.0]], dtype=np.float32)
-                a_best = float(beta_ols[0]); b_best = float(beta_ols[1])
-                inliers_best = np.ones(y.shape[0], dtype=bool)
-
-                rng = np.random.default_rng(0)
-                for _ in range(ransac_iter):
-                    if y.shape[0] < 2:
-                        break
-                    idx2 = rng.choice(y.shape[0], size=2, replace=False)
-                    X2 = X[idx2]
-                    y2 = y[idx2]
-                    try:
-                        beta2 = np.linalg.solve(X2, y2)
-                        a2 = float(beta2[0]); b2 = float(beta2[1])
-                    except np.linalg.LinAlgError:
-                        continue
-                    resid = (X @ beta2 - y).ravel()
-                    std = float(np.std(resid)) + 1e-6
-                    thr = inlier_sigma * std
-                    inliers = np.abs(resid) <= thr
-                    if inliers.sum() > inliers_best.sum():
-                        inliers_best = inliers
-                        a_best, b_best = a2, b2
-                Xin = X[inliers_best]
-                yin = y[inliers_best]
-                try:
-                    beta = np.linalg.solve(Xin.T @ Xin, Xin.T @ yin)
-                    a = float(beta[0]); b = float(beta[1])
-                except np.linalg.LinAlgError:
-                    a, b = a_best, b_best
-            else:
-                try:
-                    beta = np.linalg.solve(XtX, X.T @ y)
-                    a = float(beta[0]); b = float(beta[1])
-                except np.linalg.LinAlgError:
-                    a, b = 1.0, 0.0
+            a, b = fit_ab(X, y)
 
             c = max((b / a) if abs(a) > eps else 0.0, 0.0)
             denom = cosI + c
@@ -219,8 +235,9 @@ class DenoiseTerrain(Denoise):
             for ch in range(C):
                 out[..., ch] = img[..., ch] * scale
 
-        if orig_dtype == np.uint8:
-            out = np.clip(out, 0, 255).astype(np.uint8)
-        else:
-            out = np.nan_to_num(out)
+        # 출력 dtype 처리
+        out = np.nan_to_num(out)
+        if np.issubdtype(orig_dtype, np.integer):
+            info = np.iinfo(orig_dtype)
+            out = np.clip(out, info.min, info.max).astype(orig_dtype)
         return out

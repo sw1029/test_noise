@@ -43,7 +43,7 @@ class TerrainNoise(NoiseBase):
         terrain_noise_image = src.copy()
 
         if DEM is not None:
-            _sun_angle, _slope = angle(DEM, sun_azimuth, sun_elevation)
+            _sun_angle, _slope = angle(DEM, sun_azimuth, sun_elevation, pixel_size=pixel_size)
         else : _slope = slope    
 
         radiance_B = np.clip(DN2radiance(src[:,:,0], gain_B, offset_B), 0, None)

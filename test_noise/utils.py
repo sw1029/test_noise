@@ -4,11 +4,21 @@ from Py6S import SixS, AtmosProfile, AeroProfile, GroundReflectance, Wavelength,
 import cv2
 
 # DEM을 통해 slope와 태양 입사각 계산
-def angle(DEM, sun_azimuth, sun_elevation):
+def angle(DEM, sun_azimuth, sun_elevation, pixel_size=1.0):
+    """
+    DEM의 기울기(slope)와 태양 입사각(incidence angle)을 계산합니다.
+    """
     sun_azimuth_rad = np.deg2rad(sun_azimuth)
     sun_elevation_rad = np.deg2rad(sun_elevation)
 
-    dz_dy, dz_dx = np.gradient(DEM)
+    # dy: 행(세로, 북-남) 방향 픽셀 간격, dx: 열(가로, 서-동) 방향 픽셀 간격
+    # 단위는 DEM의 수평 좌표 단위. 스칼라 입력 시 dy=dx=pixel_size로 사용
+    if isinstance(pixel_size, (tuple, list, np.ndarray)) and len(pixel_size) == 2:
+        dy, dx = float(pixel_size[0]), float(pixel_size[1])
+    else:
+        dy = dx = float(pixel_size)
+
+    dz_dy, dz_dx = np.gradient(DEM, dy, dx)
 
     slope_rad = np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))
     slope_deg = np.rad2deg(slope_rad)
@@ -18,7 +28,6 @@ def angle(DEM, sun_azimuth, sun_elevation):
     z = np.ones_like(DEM)
 
     magnitude = np.sqrt(x**2 + y**2 + z**2)
-    
     magnitude = np.maximum(magnitude, 1e-6)
     x /= magnitude
     y /= magnitude
@@ -31,9 +40,9 @@ def angle(DEM, sun_azimuth, sun_elevation):
 
     cos_i = x * sun_x + y * sun_y + z * sun_z
     cos_i = np.clip(cos_i, -1.0, 1.0)
-    angle = np.rad2deg(np.arccos(cos_i))
-    
-    return angle, slope_deg
+    angle_deg = np.rad2deg(np.arccos(cos_i))
+
+    return angle_deg, slope_deg
 
 # radiance <-> reflectance
 def radiance2reflectance(radiance, distance, ESUN, solar_angle):
