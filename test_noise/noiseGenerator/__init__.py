@@ -7,6 +7,7 @@ from .atmospheric_noise import AtmosphericNoise
 from .terrain_noise import TerrainNoise
 from .sun_angle_noise import SunAngleNoise
 from .striping_noise import StripingNoise
+from .generator import noiseGen
 
 gaussianNoise = GaussianNoise.add_noise
 poissonNoise = PoissonNoise.add_noise
