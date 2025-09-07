@@ -1,3 +1,4 @@
+from test_noise.noiseEval.evaluator import make_param_csv
 from test_noise.noiseGenerator import *
 from test_noise.noiseEval import *
 from test_noise.denoise import *
@@ -374,3 +375,6 @@ evaluate start
 # sun_angle_param.to_csv(os.path.join(csv_dir, 'sun_angle_param.csv'))
 # vignetting_param.to_csv(os.path.join(csv_dir, 'vignetting_param.csv'))
 """
+
+make_param_csv(src)
+make_param_csv(tif_src, save_path="tif_table.csv")
