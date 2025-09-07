@@ -20,6 +20,7 @@ dependencies = [
     "algotom",
     "numpy",
     "opencv-python",
+    "optuna",
     "pandas",
     "py6s",
     "pysolar",
