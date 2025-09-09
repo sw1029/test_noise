@@ -23,6 +23,79 @@ NOISE: Dict[str, Any] = {
     'poisson': PoissonNoise.add_noise,
 }
 
+# 파라미터 타입 힌트: CSV에서 읽은 값들을 적절한 타입으로 캐스팅하기 위함
+HINTS: Dict[str, Dict[str, Any]] = {
+    'gaussian': {
+        'mean': float, 'var': float,
+    },
+    'salt_pepper': {
+        's_vs_p': float, 'amount': float,
+    },
+    'vignetting': {
+        'strength': float, 'power': float,
+    },
+    'missingLine': {
+        'num_threshold': int, 'len_threshold': int,
+    },
+    'striping': {
+        'noise_strength': int, 'stripe_width': int, 'direction': str,
+    },
+    'sunAngle': {
+        'angle': float, 'intensity': float, 'gamma': float,
+    },
+    'terrain': {
+        'factor': float, 'slope': float, 'sun_angle': float,
+        'sun_azimuth': float, 'sun_elevation': float,
+        'Minnaert_constant_B': float, 'Minnaert_constant_G': float,
+        'Minnaert_constant_R': float, 'Minnaert_constant_NIR': float,
+    },
+    'atmospheric': {
+        'factor': float, 'haze': bool, 'rayleigh': bool, 'sun_angle': float,
+    },
+    'poisson': {
+        'factor': float,
+    },
+}
+
+def toBool(val: Any) -> bool:
+    if isinstance(val, bool):
+        return val
+    try:
+        if isinstance(val, (int,)):
+            return bool(val)
+        if isinstance(val, float):
+            return bool(int(val))
+        s = str(val).strip().lower()
+        if s in ("true", "t", "1", "yes", "y"): return True
+        if s in ("false", "f", "0", "no", "n", ""): return False
+    except Exception:
+        pass
+    return bool(val)
+
+def casting(noiseType: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    hints = HINTS.get(noiseType, {})
+    casted: Dict[str, Any] = {}
+    for k, v in params.items():
+        if v is None or pd.isna(v):
+            continue
+        typ = hints.get(k)
+        try:
+            if typ is int:
+                casted[k] = int(v)
+            elif typ is float:
+                casted[k] = float(v)
+            elif typ is bool:
+                casted[k] = toBool(v)
+            elif typ is str:
+                casted[k] = str(v)
+            else:
+                # 힌트가 없으면 원본 유지
+                casted[k] = v
+        except Exception:
+            # 캐스팅 실패 시 원본 값 유지
+            casted[k] = v
+    return casted
+
 def noiseGen(src, tablePath, noiseType, metricType, targetValue, tol=0.1):
     '''
     make_param_csv를 통해 생성된 csv를 dataframe 형태로 로드하여 사용
@@ -49,7 +122,8 @@ def noiseGen(src, tablePath, noiseType, metricType, targetValue, tol=0.1):
             if pd.notna(val):
                 params[name] = val
 
-    # 노이즈 적용
+    # 타입 캐스팅 후 노이즈 적용
+    params = casting(noiseType, params)
     noise = NOISE[noiseType]
     noisy_img = noise(src, **params)
     return noisy_img
