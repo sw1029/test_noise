@@ -34,6 +34,7 @@ from test_noise.noiseGenerator import (
     sunAngleNoise,
     stripingNoise
 )
+from test_noise.noiseGenerator.generator import noiseGen
 
 terrain_noised_image = terrainNoise(src, factor=0.3, DEM=dem_cv2)
 atmosphric_noised_image = atmosphericNoise(src, factor=0.3)
@@ -44,6 +45,8 @@ poisson_noised_image = poissonNoise(src)
 striping_noised_image = stripingNoise(src)
 sun_angle_noised_image = sunAngleNoise(src)
 vignetting_noised_image = vignettingNoise(src)
+
+noisy_img = noiseGen(src, table, noise_type, metric, target, tol=tol) # 특정 민감도 수치를 재현하기 위한 노이즈 래퍼
 ```
 
 ### 2. 노이즈 제거 (Denoising)
