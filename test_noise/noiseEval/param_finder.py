@@ -23,10 +23,10 @@ NOISE = {
 # metric별 탐색을 위한 탐색공간 정의
 # positive는 증가/감소에 따른 개선여부
 METRIC = {
-    'psnr': {'func': psnr, 'positive': False, 'start': 10.0, 'end': 60.0, 'step': 1.0},
-    'ssim': {'func': ssim, 'positive': False, 'start': 0.10, 'end': 0.99, 'step': 0.05},
-    'rmse': {'func': rmse, 'positive': True, 'start': 0.0, 'end': 64.0, 'step': 1.0},
-    'mae':  {'func': mae,  'positive': True, 'start': 0.0, 'end': 64.0, 'step': 1.0},
+    'psnr': {'func': psnr, 'positive': False, 'start': 22.0, 'end': 30.0, 'step': 1.0},
+    'ssim': {'func': ssim, 'positive': False, 'start': 0.6,  'end': 0.95, 'step': 0.05},
+    'rmse': {'func': rmse, 'positive': True,  'start': 3.0,  'end': 20.0, 'step': 1.0},
+    'mae':  {'func': mae,  'positive': True,  'start': 1.0,  'end': 8.0,  'step': 1.0},
 }
 
 # 노이즈별 탐색 파라미터 공간 정의
