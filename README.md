@@ -81,6 +81,7 @@ from test_noise.noiseEval import (
     mae,
     find_param
 )
+from test_noise.noiseEval.evaluator import make_param_csv
 
 denoised = {
     "Terrain": terrain_denoised_image,
@@ -112,6 +113,8 @@ poisson_param = evaluate(poisson_noised_image, 0.1, metric="rmse")
 striping_param = evaluate(striping_noised_image, 0.1, metric="rmse")
 sun_angle_param = evaluate(sun_angle_noised_image, 0.1, metric="rmse")
 vignetting_param = evaluate(vignetting_noised_image, 0.1, metric="rmse")
+
+make_param_csv(src)
 ```
 
 ### 시각적 비교
