@@ -7,12 +7,22 @@ class MissingLineNoise(NoiseBase):
         rows, cols, channels = src.shape
         missing_line_image = src.copy()
 
-        # 무작위로 삭제할 줄의 인덱스 선택
-        missing_rows = np.random.choice(rows, size=np.random.randint(1, num_threshold + 1), replace=False)
+        max_pick = max(1, min(rows, num_threshold))
+        pick_size = np.random.randint(1, max_pick + 1)
+        missing_rows = np.random.choice(rows, size=pick_size, replace=False)
         for row in missing_rows:
             # 결손 시작 위치와 길이 설정
-            start_col = np.random.randint(0, cols / 2)  # 결손 시작 위치
-            line_length = np.random.randint(100, len_threshold + 1)  # 결손 길이 (100부터 len_threshold까지)
+            start_high = max(1, cols // 2)
+            start_col = np.random.randint(0, start_high)  # 결손 시작 위치
+
+            # 결손 길이 샘플링을 항상 유효 범위로 보정
+            max_len = max(1, cols - start_col)
+            hi_candidate = min(int(len_threshold), max_len)
+            lo = 100
+            if hi_candidate <= lo:
+                line_length = hi_candidate
+            else:
+                line_length = np.random.randint(lo, hi_candidate + 1) 
 
             # 결손 구간이 이미지 경계를 넘어가지 않도록 설정
             end_col = min(start_col + line_length, cols)
