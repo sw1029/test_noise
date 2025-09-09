@@ -20,7 +20,8 @@ class DenoiseRandom(Denoise):
         img = src.copy()
 
         if type == 'gaussian':
-            img = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 21)
+            #img = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 21)
+            img = cv2.GaussianBlur(img, (3, 3), 0)
 
         elif type == 'saltPepper':
             img = cv2.medianBlur(img, 3)
@@ -30,7 +31,8 @@ class DenoiseRandom(Denoise):
             max = img.max() 
             img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
 
-            img = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 21)
+            #img = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 21)
+            img = cv2.GaussianBlur(img, (3, 3), 0)
 
             img = cv2.normalize(img.astype(np.float32), None, 0, max, cv2.NORM_MINMAX)
             img = (img / 2)**2 - 3/8
