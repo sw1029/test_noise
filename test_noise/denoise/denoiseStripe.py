@@ -146,15 +146,43 @@ class DenoiseStripe(Denoise):
         return mag_i**2 
 
     @staticmethod
-    def denoise_algotom(src: np.ndarray, size: int = 5, level: int = 7) -> np.ndarray:
+    def denoise_algotom(
+        src: np.ndarray,
+        direction: str = "vertical",
+        size: int = 5,
+        level: int = 7,
+    ) -> np.ndarray:
         '''
         오픈소스인 algotom을 이용하여 denoise를 수행합니다.
+
+        Parameters
+        - direction: 'vertical' | 'horizontal' (기본: 'vertical')
+          algotom의 제거기는 세로 줄무늬(열 방향) 제거에 최적화되어 있으므로,
+          가로 줄무늬의 경우 90° 회전하여 처리 후 되돌립니다.
+        - size, level: algotom remove_stripe_based_wavelet_fft 파라미터
         '''
+        dir_norm = (direction or "vertical").lower()
+        is_horizontal = dir_norm.startswith("h")
+
         if len(src.shape) == 3 and src.shape[2] == 3:
             b, g, r = cv2.split(src)
-            denoised_b = remove_stripe_based_wavelet_fft(b.astype(np.float32), size=size, level=level)
-            denoised_g = remove_stripe_based_wavelet_fft(g.astype(np.float32), size=size, level=level)
-            denoised_r = remove_stripe_based_wavelet_fft(r.astype(np.float32), size=size, level=level)
+
+            if is_horizontal:
+                b_rot = np.rot90(b, 1)
+                g_rot = np.rot90(g, 1)
+                r_rot = np.rot90(r, 1)
+
+                db = remove_stripe_based_wavelet_fft(b_rot.astype(np.float32), size=size, level=level)
+                dg = remove_stripe_based_wavelet_fft(g_rot.astype(np.float32), size=size, level=level)
+                dr = remove_stripe_based_wavelet_fft(r_rot.astype(np.float32), size=size, level=level)
+
+                denoised_b = np.rot90(db, -1)
+                denoised_g = np.rot90(dg, -1)
+                denoised_r = np.rot90(dr, -1)
+            else:
+                denoised_b = remove_stripe_based_wavelet_fft(b.astype(np.float32), size=size, level=level)
+                denoised_g = remove_stripe_based_wavelet_fft(g.astype(np.float32), size=size, level=level)
+                denoised_r = remove_stripe_based_wavelet_fft(r.astype(np.float32), size=size, level=level)
 
             result = cv2.merge([denoised_b, denoised_g, denoised_r])
             if src.dtype == np.uint8:
@@ -162,7 +190,13 @@ class DenoiseStripe(Denoise):
             return result
 
         elif len(src.shape) == 2:
-            denoised_img = remove_stripe_based_wavelet_fft(src.astype(np.float32), size=size, level=level)
+            if is_horizontal:
+                src_rot = np.rot90(src, 1)
+                denoised_rot = remove_stripe_based_wavelet_fft(src_rot.astype(np.float32), size=size, level=level)
+                denoised_img = np.rot90(denoised_rot, -1)
+            else:
+                denoised_img = remove_stripe_based_wavelet_fft(src.astype(np.float32), size=size, level=level)
+
             if src.dtype == np.uint8:
                 return np.clip(denoised_img, 0, 255).astype(np.uint8)
             return denoised_img
