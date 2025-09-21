@@ -35,11 +35,19 @@ class DenoiseStripe(Denoise):
             raise ValueError("Input must be a single-channel image.")
 
         img = src.astype(np.float32)
-
-        # 짝수 크기의 이미지만 처리해야 함
-        h, w = img.shape
-        roi = (0, 0, w & -2, h & -2)
-        img = img[roi[1]:roi[3], roi[0]:roi[2]]
+        # 짝수 크기 요구에 대비하여 '패딩 후 처리, 처리 후 원복'으로 변경
+        h0, w0 = img.shape
+        pad_bottom = h0 % 2
+        pad_right = w0 % 2
+        if pad_bottom or pad_right:
+            img = cv2.copyMakeBorder(
+                img,
+                top=0,
+                bottom=pad_bottom,
+                left=0,
+                right=pad_right,
+                borderType=cv2.BORDER_REPLICATE,
+            )
 
         # PSD 계산
         psd = DenoiseStripe.calc_psd(img)
@@ -69,18 +77,17 @@ class DenoiseStripe(Denoise):
             for peak in peaks:
                 if abs(peak - cx) > 5:
                     DenoiseStripe.synthesize_filter_H(H, (peak, cy), radius)
-        
+
         H = DenoiseStripe.fftshift(H)
         img = DenoiseStripe.filter2D_frequency(img, H)
 
         cv2.normalize(img, img, 0, 255, cv2.NORM_MINMAX)
         img = img.astype(np.uint8)
-        
-        # 원본 크기에 맞게 패딩 추가
-        result = np.zeros((h, w), dtype=np.uint8)
-        result[roi[1]:roi[3], roi[0]:roi[2]] = img
-        
-        return result
+
+        # 처리 후 원본 크기로 크롭하여 반환
+        if (img.shape[0] != h0) or (img.shape[1] != w0):
+            img = img[:h0, :w0]
+        return img
 
     
     @staticmethod
@@ -164,6 +171,27 @@ class DenoiseStripe(Denoise):
         dir_norm = (direction or "vertical").lower()
         is_horizontal = dir_norm.startswith("h")
 
+        def _pad_to_multiple(img2: np.ndarray, m: int) -> tuple[np.ndarray, int, int]:
+            h, w = img2.shape
+            h2 = ((h + m - 1) // m) * m
+            w2 = ((w + m - 1) // m) * m
+            pad_b = h2 - h
+            pad_r = w2 - w
+            if pad_b or pad_r:
+                img2 = cv2.copyMakeBorder(
+                    img2, 0, pad_b, 0, pad_r, borderType=cv2.BORDER_REPLICATE
+                )
+            return img2, pad_b, pad_r
+
+        def _wavelet_denoise_single(ch: np.ndarray) -> np.ndarray:
+            m = 1 << max(int(level), 0)
+            h0, w0 = ch.shape
+            chf = ch.astype(np.float32, copy=False)
+            chf, pb, pr = _pad_to_multiple(chf, m)
+            out = remove_stripe_based_wavelet_fft(chf, size=size, level=level)
+            out = out[:h0, :w0]
+            return out
+
         if len(src.shape) == 3 and src.shape[2] == 3:
             b, g, r = cv2.split(src)
 
@@ -172,17 +200,17 @@ class DenoiseStripe(Denoise):
                 g_rot = np.rot90(g, 1)
                 r_rot = np.rot90(r, 1)
 
-                db = remove_stripe_based_wavelet_fft(b_rot.astype(np.float32), size=size, level=level)
-                dg = remove_stripe_based_wavelet_fft(g_rot.astype(np.float32), size=size, level=level)
-                dr = remove_stripe_based_wavelet_fft(r_rot.astype(np.float32), size=size, level=level)
+                db = _wavelet_denoise_single(b_rot)
+                dg = _wavelet_denoise_single(g_rot)
+                dr = _wavelet_denoise_single(r_rot)
 
                 denoised_b = np.rot90(db, -1)
                 denoised_g = np.rot90(dg, -1)
                 denoised_r = np.rot90(dr, -1)
             else:
-                denoised_b = remove_stripe_based_wavelet_fft(b.astype(np.float32), size=size, level=level)
-                denoised_g = remove_stripe_based_wavelet_fft(g.astype(np.float32), size=size, level=level)
-                denoised_r = remove_stripe_based_wavelet_fft(r.astype(np.float32), size=size, level=level)
+                denoised_b = _wavelet_denoise_single(b)
+                denoised_g = _wavelet_denoise_single(g)
+                denoised_r = _wavelet_denoise_single(r)
 
             result = cv2.merge([denoised_b, denoised_g, denoised_r])
             if src.dtype == np.uint8:
@@ -192,10 +220,10 @@ class DenoiseStripe(Denoise):
         elif len(src.shape) == 2:
             if is_horizontal:
                 src_rot = np.rot90(src, 1)
-                denoised_rot = remove_stripe_based_wavelet_fft(src_rot.astype(np.float32), size=size, level=level)
+                denoised_rot = _wavelet_denoise_single(src_rot)
                 denoised_img = np.rot90(denoised_rot, -1)
             else:
-                denoised_img = remove_stripe_based_wavelet_fft(src.astype(np.float32), size=size, level=level)
+                denoised_img = _wavelet_denoise_single(src)
 
             if src.dtype == np.uint8:
                 return np.clip(denoised_img, 0, 255).astype(np.uint8)
