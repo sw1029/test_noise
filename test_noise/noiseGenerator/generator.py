@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from .gaussian_noise import GaussianNoise
 from .salt_pepper_noise import SaltPepperNoise
@@ -10,6 +10,7 @@ from .sun_angle_noise import SunAngleNoise
 from .terrain_noise import TerrainNoise
 from .atmospheric_noise import AtmosphericNoise
 from .poisson_noise import PoissonNoise
+from ..utils import with_np_seed
 
 NOISE: Dict[str, Any] = {
     'gaussian': GaussianNoise.add_noise,
@@ -96,7 +97,7 @@ def casting(noiseType: str, params: Dict[str, Any]) -> Dict[str, Any]:
             casted[k] = v
     return casted
 
-def noiseGen(src, tablePath, noiseType, metricType, targetValue, tol=0.1):
+def noiseGen(src, tablePath, noiseType, metricType, targetValue, tol=0.1, seed: Optional[int] = None):
     '''
     make_param_csv를 통해 생성된 csv를 dataframe 형태로 로드하여 사용
     noiseType에 따른 noise를 noiseGenerator를 통해 호출하여 생성 후 반환하되, 파라미터는 테이블에서 불러옴
@@ -125,7 +126,11 @@ def noiseGen(src, tablePath, noiseType, metricType, targetValue, tol=0.1):
     # 타입 캐스팅 후 노이즈 적용
     params = casting(noiseType, params)
     noise = NOISE[noiseType]
-    noisy_img = noise(src, **params)
+    if seed is not None:
+        with with_np_seed(int(seed)):
+            noisy_img = noise(src, **params)
+    else:
+        noisy_img = noise(src, **params)
     return noisy_img
 
 __all__ = ['noiseGen']
