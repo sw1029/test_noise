@@ -4,6 +4,7 @@
 
 from ..noiseGenerator import *
 from .metric import *
+from ..utils import with_np_seed, make_eval_seeds
 import numpy as np
 from typing import Dict, Any, List, Optional, Tuple
 import optuna
@@ -118,7 +119,12 @@ def find_params(img: np.ndarray,
                 tol: float = 0.01,
                 seed: Optional[int] = None,
                 quiet: bool = True,
-                progress: bool = False) -> Tuple[Dict[str, Any], float]:
+                progress: bool = False,
+                eval_seeds: Optional[List[int]] = None,
+                n_eval_seeds: int = 1,
+                eval_seed_base: Optional[int] = None,
+                return_details: bool = False,
+                ) -> Tuple[Dict[str, Any], float]:
     """
     Optuna를 사용하여 지정한 metric 값(target)에 가장 근접한 파라미터 조합을 탐색.
     """
@@ -137,13 +143,34 @@ def find_params(img: np.ndarray,
     sampler = optuna.samplers.TPESampler(seed=seed)
     study = optuna.create_study(direction='minimize', sampler=sampler)
 
+    # 고정된 평가 시드 집합 구성
+    if eval_seeds is not None:
+        seeds_for_eval: List[int] = list(map(int, eval_seeds))
+    else:
+        n = max(1, int(n_eval_seeds))
+        base = int(eval_seed_base) if eval_seed_base is not None else (seed if seed is not None else 0)
+        scope = f"{noise_type}|{value_type}"
+        seeds_for_eval = make_eval_seeds(scope, base, n, ret_bits=31)
+
     def objective(trial: optuna.Trial) -> float:
         params = suggest(trial, noise_type)
-        noisy_img = noise_fn(img, **params)
-        val = float(metric_fn(img, noisy_img))
-        err = abs(val - target)
+
+        # 각 seed로 평가
+        vals: List[float] = []
+        for s in seeds_for_eval:
+            with with_np_seed(int(s)):
+                noisy_img = noise_fn(img, **params)
+            v = float(metric_fn(img, noisy_img))
+            vals.append(v)
+
+        # 평균값을 목적함수로 사용
+        mean_val = float(np.mean(vals)) if len(vals) > 0 else float('inf')
+        err = abs(mean_val - target)
+
         # 결과 기록
-        trial.set_user_attr('val', val)
+        trial.set_user_attr('val', mean_val)
+        trial.set_user_attr('vals', vals)
+        trial.set_user_attr('seeds', seeds_for_eval)
         
         if err <= tol:
             # 목표 오차 이내에 도달한 경우 조기종료
@@ -159,11 +186,39 @@ def find_params(img: np.ndarray,
     
     best = study.best_trial
     best_val = best.user_attrs.get('val', None)
-    if best_val is None:
-        noisy_img = noise_fn(img, **best.params)
-        best_val = float(metric_fn(img, noisy_img))
 
-    return best.params, float(best_val)
+    # 필요시 재평가
+    best_vals: Optional[List[float]] = best.user_attrs.get('vals')
+    best_seeds: Optional[List[int]] = best.user_attrs.get('seeds')
+
+    if best_val is None or best_vals is None:
+        # best trial에 기록이 없다면 동일 seed 집합으로 재평가
+        recomputed_vals: List[float] = []
+        for s in seeds_for_eval:
+            with with_np_seed(int(s)):
+                noisy_img = noise_fn(img, **best.params)
+            recomputed_vals.append(float(metric_fn(img, noisy_img)))
+        best_vals = recomputed_vals
+        best_seeds = seeds_for_eval
+        best_val = float(np.mean(best_vals)) if len(best_vals) > 0 else float('inf')
+
+    details: Dict[str, Any] = {
+        'eval_seeds': list(map(int, best_seeds)) if best_seeds is not None else list(map(int, seeds_for_eval)),
+        'per_seed_vals': list(map(float, best_vals)) if best_vals is not None else [],
+    }
+    try:
+        arr = np.array(details['per_seed_vals'], dtype=float)
+        details['val_mean'] = float(np.mean(arr)) if arr.size else float('inf')
+        details['val_std'] = float(np.std(arr)) if arr.size else float('nan')
+    except Exception:
+        details['val_mean'] = float(best_val) if best_val is not None else float('inf')
+        details['val_std'] = float('nan')
+
+    # 요청에 따라 details 포함 또는 기존 반환 형태 유지
+    if return_details:
+        return best.params, float(best_val), details
+    else:
+        return best.params, float(best_val)
 
 
 # 단일 탐색 전용

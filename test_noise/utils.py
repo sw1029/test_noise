@@ -2,6 +2,11 @@ import numpy as np
 import math
 from Py6S import SixS, AtmosProfile, AeroProfile, GroundReflectance, Wavelength, Geometry
 import cv2
+import os
+import random
+import hashlib
+import contextlib
+from typing import List, Optional
 
 # DEM을 통해 slope와 태양 입사각 계산
 def angle(DEM, sun_azimuth, sun_elevation, pixel_size=1.0):
@@ -145,3 +150,70 @@ def dis(image):
             return cv2.cvtColor(image, cv2.COLOR_RGBA2BGR)
         except cv2.error:
             return np.zeros(image.shape[:2], dtype=np.uint8)
+
+
+# 시드 관련 기능들
+# 동일한 입력에서 항상 동일한 시드/결과를 얻기 위함
+# 파이썬 내장 hash는 세션마다 달라질 수 있어, 안정 해시(SHA-256) 기반으로 고정성 확보
+# 무작위 시드만 사용하면 실행마다 값이 달라져 비교/디버깅이 어려울 수 있음
+def seed_all(seed: int, set_env: bool = False) -> None:
+    """
+    재현성을 위해 전역 시드를 설정
+    필요 시 자식 프로세스를 위해 환경변수 PYTHONHASHSEED 설정
+    """
+    s = int(seed)
+    try:
+        np.random.seed(s)
+    except Exception:
+        pass
+    try:
+        random.seed(s)
+    except Exception:
+        pass
+    if set_env:
+        os.environ['PYTHONHASHSEED'] = str(s)
+
+
+@contextlib.contextmanager
+def with_np_seed(seed: int):
+    """
+    numpy 전역 난수 시드를 일시적으로 설정하고 사용 후 원상 복구
+    """
+    state = np.random.get_state()
+    try:
+        np.random.seed(int(seed))
+        yield
+    finally:
+        try:
+            np.random.set_state(state)
+        except Exception:
+            pass
+
+
+def hash_to_int(text: str, bits: int = 64) -> int:
+    """
+    SHA-256을 이용해 플랫폼에 독립적인 안정 해시를 정수로 변환
+    bits는 결과 정수의 비트 폭(<= 256)을 의미
+    """
+    h = hashlib.sha256(text.encode('utf-8')).digest()
+    val = int.from_bytes(h, 'big')
+    if bits <= 0 or bits > 256:
+        bits = 64
+    mod = (1 << bits)
+    return val % mod
+
+
+def make_eval_seeds(scope: str, base_seed: int, n: int, ret_bits: int = 31) -> List[int]:
+    """
+    안정 해시 기반의 시드를 사용해 평가용 정수 시드 리스트를 생성
+    scope에는 문맥(예: "noise|metric")을 넣어 조합별로 다른 시드가 나오게 함
+    ret_bits는 시드의 최대값 범위를 제어하며, 결과 시드는 [0, 2**ret_bits - 1] 범위
+    """
+    n = max(1, int(n))
+    base = int(base_seed)
+    # scope + base_seed로부터 결정적인 64비트 시드를 도출
+    root = hash_to_int(f"{scope}|{base}", bits=64)
+    rng = np.random.Generator(np.random.PCG64(root))
+    high = (1 << ret_bits) - 1
+    arr = rng.integers(0, high, size=n, dtype=np.int64)
+    return arr.astype(int).tolist()

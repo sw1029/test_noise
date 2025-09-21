@@ -6,6 +6,7 @@ param finder를 통해 noise, metric별 파라미터를 찾고 dataframe 형태�
 
 from .metric import *
 from .param_finder import *
+from ..utils import make_eval_seeds
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
@@ -43,7 +44,11 @@ def make_param_csv(src,
                    val_eps: Optional[float] = None,
                    verbose: bool = False,
                    optuna_quiet: bool = True,
-                   optuna_progress: bool = False):
+                   optuna_progress: bool = False,
+                   optuna_seed: Optional[int] = 0,
+                   seeds: int = 1,
+                   eval_seed_base: Optional[int] = 12345,
+                   store_per_seed_values: bool = True):
     '''
     각 metric 별로 0.1 단위로 분할하여 모든 민감도 수치를 재현하기 위한 파라미터 테이블을 csv 형태로 저장
     프로젝트 루트 디렉토리에 table.csv 형태로 저장
@@ -60,22 +65,59 @@ def make_param_csv(src,
             stagnant = 0
             eps = val_eps if val_eps is not None else max(float(grid.get('step', 0.0) or 0.0) * 0.1, float(tol) * 0.5)
 
+            # 재현성을 위한 n개 시드
+            if seeds and seeds > 1:
+                base = int(eval_seed_base) if eval_seed_base is not None else 0
+                scope = f"{noise_type}|{metric_type}"
+                eval_seeds = make_eval_seeds(scope, base, int(seeds), ret_bits=31)
+            else:
+                eval_seeds = None
+
             for target in tqdm(targets, desc=f"{noise_type}:{metric_type}"):
                 try:
-                    params, val = find_params(src, float(target),
-                                              noise_type=noise_type,
-                                              value_type=metric_type,
-                                              n_trials=iter, tol=tol,
-                                              quiet=optuna_quiet,
-                                              progress=optuna_progress)
+                    if eval_seeds is None and (seeds is None or int(seeds) <= 1):
+                        # 단일 평가
+                        params, val = find_params(src, float(target),
+                                                  noise_type=noise_type,
+                                                  value_type=metric_type,
+                                                  n_trials=iter, tol=tol,
+                                                  seed=optuna_seed,
+                                                  quiet=optuna_quiet,
+                                                  progress=optuna_progress)
+                        details = None
+                    else:
+                        # 다중 시드 평균 평가 + 시드/값 기록
+                        params, val, details = find_params(src, float(target),
+                                                           noise_type=noise_type,
+                                                           value_type=metric_type,
+                                                           n_trials=iter, tol=tol,
+                                                           seed=optuna_seed,
+                                                           quiet=optuna_quiet,
+                                                           progress=optuna_progress,
+                                                           eval_seeds=eval_seeds,
+                                                           n_eval_seeds=int(seeds),
+                                                           eval_seed_base=int(eval_seed_base) if eval_seed_base is not None else None,
+                                                           return_details=True)
                 except Exception:
                     params, val = {}, float('inf')
+                    details = None
 
                 row = {
                     'noise_type': noise_type,
                     'metric_type': metric_type,
                     'target': float(target),
-                    'value': float(val) if val is not None else np.nan,  # None인 경우 nan 처리
+                    # value는 평균값으로 기록
+                    'value': float(val) if val is not None else np.nan,
+                    # 보조 지표: 표준편차 및 시드 기록
+                    'value_std': (float(details.get('val_std')) if details and (details.get('val_std') is not None) else np.nan),
+                    'eval_seeds': (
+                        ','.join(map(str, details.get('eval_seeds'))) if (details and details.get('eval_seeds')) else (
+                            ','.join(map(str, eval_seeds)) if eval_seeds else ''
+                        )
+                    ),
+                    'per_seed_values': (
+                        ','.join(map(lambda x: f"{float(x):.6g}", details.get('per_seed_vals'))) if (details and details.get('per_seed_vals')) else ''
+                    ),
                     'success': (val is not None) and (np.isfinite(val)) and (abs(val - float(target)) <= tol)
                 }
                 for k, v in params.items():
