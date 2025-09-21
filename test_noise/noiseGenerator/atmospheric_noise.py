@@ -18,7 +18,8 @@ class AtmosphericNoise(NoiseBase):
                   factor=0.1,
                   haze=True, rayleigh=True,
                   yaml_name='KOMPSAT.yaml',
-                  sun_angle=30) -> np.ndarray:
+                  sun_angle=30,
+                  calib_mode: str = 'auto') -> np.ndarray:
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(current_dir, '..', 'config', yaml_name) # config 디렉토리에서 yaml을 읽어들인다
@@ -53,19 +54,19 @@ class AtmosphericNoise(NoiseBase):
         rows, cols, channels = src.shape # src에서 row, cols, channels 추출
         atmospheric_noise_image = src.copy() # 최종적으로 return 하게 될 객체
 
-        radiance_B = DN2radiance(src[:, :, 0], gain_B, offset_B)
-        radiance_G = DN2radiance(src[:, :, 1], gain_G, offset_G)
-        radiance_R = DN2radiance(src[:, :, 2], gain_R, offset_R)
-        if channels == 4: # NIR 채널이 존재하는 경우 연산
-            radiance_NIR = DN2radiance(src[:, :, 3], gain_NIR, offset_NIR)
+        # 자동 모드에서는 8비트 입력(uint8)일 경우 반사도(0~1) 도메인에서 연산
+        use_reflectance = (calib_mode == 'reflectance') or (calib_mode == 'auto' and src.dtype == np.uint8)
+
+        if not use_reflectance:
+            radiance_B = DN2radiance(src[:, :, 0], gain_B, offset_B)
+            radiance_G = DN2radiance(src[:, :, 1], gain_G, offset_G)
+            radiance_R = DN2radiance(src[:, :, 2], gain_R, offset_R)
+            if channels == 4: # NIR 채널이 존재하는 경우 연산
+                radiance_NIR = DN2radiance(src[:, :, 3], gain_NIR, offset_NIR)
 
         solar_zenith= np.deg2rad(90 - sun_angle) # 태양 천정각 계산
 
-        new_radiance_B = radiance_B.copy()
-        new_radiance_G = radiance_G.copy()
-        new_radiance_R = radiance_R.copy()
-        if channels == 4:
-            new_radiance_NIR = radiance_NIR.copy()
+        # radiance 기반 경로에서만 필요한 버퍼는 이후 분기 내에서 생성
 
         '''
         rad0 : Lp
@@ -98,7 +99,7 @@ class AtmosphericNoise(NoiseBase):
 
         # haze만 적용된 radiance는 계산 편의상 위에서 구한 값들과 base값들을 통해 산출하는 방식으로 이후 도출한다.
 
-        # base 계산
+        # base 계산 (reflectance -> radiance 변환 스케일)
         baseB = reflectance2radiance(1.0, 1.0, ESUN_B, solar_zenith)
         baseG = reflectance2radiance(1.0, 1.0, ESUN_G, solar_zenith)
         baseR = reflectance2radiance(1.0, 1.0, ESUN_R, solar_zenith)
@@ -107,43 +108,115 @@ class AtmosphericNoise(NoiseBase):
 
         # 파라미터로 제공된 haze, rayleigh 활성화 여부에 따라 noise를 다르게 적용하여 반환함
 
-        if haze and rayleigh:
-            new_radiance_B = (radiance_B / baseB) * (rad1_both_B - rad0_both_B) + rad0_both_B
-            new_radiance_G = (radiance_G / baseG) * (rad1_both_G - rad0_both_G) + rad0_both_G
-            new_radiance_R = (radiance_R / baseR) * (rad1_both_R - rad0_both_R) + rad0_both_R
-            if channels == 4 :
-                new_radiance_NIR = (radiance_NIR / baseNIR) * (rad1_both_NIR - rad0_both_NIR) + rad0_both_NIR
-        elif haze and not rayleigh:
-            new_radiance_B = ((radiance_B / baseB)
-                              * ((rad1_both_B - rad0_both_B) - (rad1_rayleigh_B - rad0_rayleigh_B))
-                              + ( rad0_both_B - rad0_rayleigh_B))
-            new_radiance_G = ((radiance_G / baseG)
-                              * ((rad1_both_G - rad0_both_G) - (rad1_rayleigh_G - rad0_rayleigh_G))
-                              + ( rad0_both_G - rad0_rayleigh_G))
-            new_radiance_R = ((radiance_R / baseR)
-                              * ((rad1_both_R - rad0_both_R) - (rad1_rayleigh_R - rad0_rayleigh_R))
-                              + ( rad0_both_R - rad0_rayleigh_R))
-            if channels == 4 :
-                new_radiance_NIR = ((radiance_NIR / baseNIR)
-                                  * ((rad1_both_NIR - rad0_both_NIR) - (rad1_rayleigh_NIR - rad0_rayleigh_NIR))
-                                  + ( rad0_both_NIR - rad0_rayleigh_NIR))
+        if use_reflectance:
+            # 반사도 도메인에서 노이즈 모델 적용 및 혼합
+            rho_B = src[:, :, 0].astype(np.float32) / 255.0
+            rho_G = src[:, :, 1].astype(np.float32) / 255.0
+            rho_R = src[:, :, 2].astype(np.float32) / 255.0
+            if channels == 4:
+                rho_NIR = src[:, :, 3].astype(np.float32) / 255.0
 
-        elif not haze and rayleigh:
-            new_radiance_B = (radiance_B / baseB) * (rad1_rayleigh_B - rad0_rayleigh_B) + rad0_rayleigh_B
-            new_radiance_G = (radiance_G / baseG) * (rad1_rayleigh_G - rad0_rayleigh_G) + rad0_rayleigh_G
-            new_radiance_R = (radiance_R / baseR) * (rad1_rayleigh_R - rad0_rayleigh_R) + rad0_rayleigh_R
-            if channels == 4 :
-                new_radiance_NIR = (radiance_NIR / baseNIR) * (rad1_rayleigh_NIR - rad0_rayleigh_NIR) + rad0_rayleigh_NIR
+            # Py6S radiance를 반사도 단위로 변환
+            d_both_B = (rad1_both_B - rad0_both_B) / baseB; c_both_B = (rad0_both_B / baseB)
+            d_both_G = (rad1_both_G - rad0_both_G) / baseG; c_both_G = (rad0_both_G / baseG)
+            d_both_R = (rad1_both_R - rad0_both_R) / baseR; c_both_R = (rad0_both_R / baseR)
+            if channels == 4:
+                d_both_NIR = (rad1_both_NIR - rad0_both_NIR) / baseNIR; c_both_NIR = (rad0_both_NIR / baseNIR)
 
+            d_ray_B = (rad1_rayleigh_B - rad0_rayleigh_B) / baseB; c_ray_B = (rad0_rayleigh_B / baseB)
+            d_ray_G = (rad1_rayleigh_G - rad0_rayleigh_G) / baseG; c_ray_G = (rad0_rayleigh_G / baseG)
+            d_ray_R = (rad1_rayleigh_R - rad0_rayleigh_R) / baseR; c_ray_R = (rad0_rayleigh_R / baseR)
+            if channels == 4:
+                d_ray_NIR = (rad1_rayleigh_NIR - rad0_rayleigh_NIR) / baseNIR; c_ray_NIR = (rad0_rayleigh_NIR / baseNIR)
 
-        # radiance -> DN
-        atmospheric_noise_image[:, :, 0] = np.clip(radiance2DN(new_radiance_B, gain_B, offset_B), 0, 255).astype(np.uint8)
-        atmospheric_noise_image[:, :, 1] = np.clip(radiance2DN(new_radiance_G, gain_G, offset_G), 0, 255).astype(np.uint8)
-        atmospheric_noise_image[:, :, 2] = np.clip(radiance2DN(new_radiance_R, gain_R, offset_R), 0, 255).astype(np.uint8)
-        if channels == 4:
-            atmospheric_noise_image[:, :, 3] = np.clip(radiance2DN(new_radiance_NIR, gain_NIR, offset_NIR), 0, 255).astype(np.uint8)
+            if haze and rayleigh:
+                new_rho_B = rho_B * d_both_B + c_both_B
+                new_rho_G = rho_G * d_both_G + c_both_G
+                new_rho_R = rho_R * d_both_R + c_both_R
+                if channels == 4:
+                    new_rho_NIR = rho_NIR * d_both_NIR + c_both_NIR
+            elif haze and not rayleigh:
+                new_rho_B = rho_B * (d_both_B - d_ray_B) + (c_both_B - c_ray_B)
+                new_rho_G = rho_G * (d_both_G - d_ray_G) + (c_both_G - c_ray_G)
+                new_rho_R = rho_R * (d_both_R - d_ray_R) + (c_both_R - c_ray_R)
+                if channels == 4:
+                    new_rho_NIR = rho_NIR * (d_both_NIR - d_ray_NIR) + (c_both_NIR - c_ray_NIR)
+            elif (not haze) and rayleigh:
+                new_rho_B = rho_B * d_ray_B + c_ray_B
+                new_rho_G = rho_G * d_ray_G + c_ray_G
+                new_rho_R = rho_R * d_ray_R + c_ray_R
+                if channels == 4:
+                    new_rho_NIR = rho_NIR * d_ray_NIR + c_ray_NIR
+            else:
+                # haze=False, rayleigh=False 인 경우: 변화 없음
+                new_rho_B = rho_B
+                new_rho_G = rho_G
+                new_rho_R = rho_R
+                if channels == 4:
+                    new_rho_NIR = rho_NIR
 
-        atmospheric_noise_image = src * (1 - factor) + atmospheric_noise_image * factor
-        atmospheric_noise_image = np.clip(atmospheric_noise_image, 0, 255).astype(np.uint8)
+            # 물리 범위 보장: 반사도 0~1로 클램프
+            new_rho_B = np.clip(new_rho_B, 0.0, 1.0)
+            new_rho_G = np.clip(new_rho_G, 0.0, 1.0)
+            new_rho_R = np.clip(new_rho_R, 0.0, 1.0)
+            if channels == 4:
+                new_rho_NIR = np.clip(new_rho_NIR, 0.0, 1.0)
+
+            # 반사도 혼합 후 DN로 복귀
+            rho_mix_B = (1.0 - factor) * rho_B + factor * new_rho_B
+            rho_mix_G = (1.0 - factor) * rho_G + factor * new_rho_G
+            rho_mix_R = (1.0 - factor) * rho_R + factor * new_rho_R
+            if channels == 4:
+                rho_mix_NIR = (1.0 - factor) * rho_NIR + factor * new_rho_NIR
+
+            # 혼합 결과도 0~1로 클램프 후 DN 변환
+            rho_mix_B = np.clip(rho_mix_B, 0.0, 1.0)
+            atmospheric_noise_image[:, :, 0] = np.clip(rho_mix_B * 255.0, 0, 255).astype(np.uint8)
+            rho_mix_G = np.clip(rho_mix_G, 0.0, 1.0)
+            atmospheric_noise_image[:, :, 1] = np.clip(rho_mix_G * 255.0, 0, 255).astype(np.uint8)
+            rho_mix_R = np.clip(rho_mix_R, 0.0, 1.0)
+            atmospheric_noise_image[:, :, 2] = np.clip(rho_mix_R * 255.0, 0, 255).astype(np.uint8)
+            if channels == 4:
+                rho_mix_NIR = np.clip(rho_mix_NIR, 0.0, 1.0)
+                atmospheric_noise_image[:, :, 3] = np.clip(rho_mix_NIR * 255.0, 0, 255).astype(np.uint8)
+        else:
+            # radiance 도메인에서 선형 혼합 후 DN 변환 (역연산과 정확히 상응)
+            new_radiance_B = (radiance_B / baseB) * (rad1_both_B - rad0_both_B) + rad0_both_B if (haze and rayleigh) else None
+            new_radiance_G = (radiance_G / baseG) * (rad1_both_G - rad0_both_G) + rad0_both_G if (haze and rayleigh) else None
+            new_radiance_R = (radiance_R / baseR) * (rad1_both_R - rad0_both_R) + rad0_both_R if (haze and rayleigh) else None
+            if channels == 4:
+                new_radiance_NIR = (radiance_NIR / baseNIR) * (rad1_both_NIR - rad0_both_NIR) + rad0_both_NIR if (haze and rayleigh) else None
+
+            if haze and not rayleigh:
+                new_radiance_B = (radiance_B / baseB) * ((rad1_both_B - rad0_both_B) - (rad1_rayleigh_B - rad0_rayleigh_B)) + (rad0_both_B - rad0_rayleigh_B)
+                new_radiance_G = (radiance_G / baseG) * ((rad1_both_G - rad0_both_G) - (rad1_rayleigh_G - rad0_rayleigh_G)) + (rad0_both_G - rad0_rayleigh_G)
+                new_radiance_R = (radiance_R / baseR) * ((rad1_both_R - rad0_both_R) - (rad1_rayleigh_R - rad0_rayleigh_R)) + (rad0_both_R - rad0_rayleigh_R)
+                if channels == 4:
+                    new_radiance_NIR = (radiance_NIR / baseNIR) * ((rad1_both_NIR - rad0_both_NIR) - (rad1_rayleigh_NIR - rad0_rayleigh_NIR)) + (rad0_both_NIR - rad0_rayleigh_NIR)
+            elif (not haze) and rayleigh:
+                new_radiance_B = (radiance_B / baseB) * (rad1_rayleigh_B - rad0_rayleigh_B) + rad0_rayleigh_B
+                new_radiance_G = (radiance_G / baseG) * (rad1_rayleigh_G - rad0_rayleigh_G) + rad0_rayleigh_G
+                new_radiance_R = (radiance_R / baseR) * (rad1_rayleigh_R - rad0_rayleigh_R) + rad0_rayleigh_R
+                if channels == 4:
+                    new_radiance_NIR = (radiance_NIR / baseNIR) * (rad1_rayleigh_NIR - rad0_rayleigh_NIR) + rad0_rayleigh_NIR
+            else:
+                # haze=False, rayleigh=False 인 경우: 변화 없음
+                new_radiance_B = radiance_B
+                new_radiance_G = radiance_G
+                new_radiance_R = radiance_R
+                if channels == 4:
+                    new_radiance_NIR = radiance_NIR
+
+            rad_mix_B = (1.0 - factor) * radiance_B + factor * new_radiance_B
+            rad_mix_G = (1.0 - factor) * radiance_G + factor * new_radiance_G
+            rad_mix_R = (1.0 - factor) * radiance_R + factor * new_radiance_R
+            if channels == 4:
+                rad_mix_NIR = (1.0 - factor) * radiance_NIR + factor * new_radiance_NIR
+
+            atmospheric_noise_image[:, :, 0] = np.clip(radiance2DN(rad_mix_B, gain_B, offset_B), 0, 255).astype(np.uint8)
+            atmospheric_noise_image[:, :, 1] = np.clip(radiance2DN(rad_mix_G, gain_G, offset_G), 0, 255).astype(np.uint8)
+            atmospheric_noise_image[:, :, 2] = np.clip(radiance2DN(rad_mix_R, gain_R, offset_R), 0, 255).astype(np.uint8)
+            if channels == 4:
+                atmospheric_noise_image[:, :, 3] = np.clip(radiance2DN(rad_mix_NIR, gain_NIR, offset_NIR), 0, 255).astype(np.uint8)
 
         return atmospheric_noise_image

@@ -9,7 +9,8 @@ class DenoiseAtmospheric(Denoise):
     def denoise(src, factor = 0.3,
                   haze=True, rayleigh=True,
                   yaml_name='KOMPSAT.yaml',
-                  sun_angle=30) -> np.ndarray:
+                  sun_angle=30,
+                  calib_mode: str = 'auto') -> np.ndarray:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(current_dir, '..', 'config', yaml_name) # config 디렉토리에서 yaml을 읽어들인다
 
@@ -43,11 +44,14 @@ class DenoiseAtmospheric(Denoise):
         rows, cols, channels = src.shape # src에서 row, cols, channels 추출
         atmospheric_noise_image = src.copy() # 최종적으로 return 하게 될 객체
 
-        radiance_B = DN2radiance(src[:, :, 0], gain_B, offset_B)
-        radiance_G = DN2radiance(src[:, :, 1], gain_G, offset_G)
-        radiance_R = DN2radiance(src[:, :, 2], gain_R, offset_R)
-        if channels == 4: # NIR 채널이 존재하는 경우 연산
-            radiance_NIR = DN2radiance(src[:, :, 3], gain_NIR, offset_NIR)
+        use_reflectance = (calib_mode == 'reflectance') or (calib_mode == 'auto' and src.dtype == np.uint8)
+
+        if not use_reflectance:
+            radiance_B = DN2radiance(src[:, :, 0], gain_B, offset_B)
+            radiance_G = DN2radiance(src[:, :, 1], gain_G, offset_G)
+            radiance_R = DN2radiance(src[:, :, 2], gain_R, offset_R)
+            if channels == 4: # NIR 채널이 존재하는 경우 연산
+                radiance_NIR = DN2radiance(src[:, :, 3], gain_NIR, offset_NIR)
 
         solar_zenith= np.deg2rad(90 - sun_angle) # 태양 천정각 계산
 
@@ -91,70 +95,144 @@ class DenoiseAtmospheric(Denoise):
             baseNIR = reflectance2radiance(1.0, 1.0, ESUN_NIR, solar_zenith)
         
         eps = 1e-6
-        if haze and rayleigh:
-            denominator_B = (1 - factor) + (factor / baseB) * (rad1_both_B - rad0_both_B)
-            denominator_B = np.maximum(denominator_B, eps)
-            new_radiance_B = (radiance_B - factor * rad0_both_B) / denominator_B
-
-            denominator_G = (1 - factor) + (factor / baseG) * (rad1_both_G - rad0_both_G)
-            denominator_G = np.maximum(denominator_G, eps)
-            new_radiance_G = (radiance_G - factor * rad0_both_G) / denominator_G
-
-            denominator_R = (1 - factor) + (factor / baseR) * (rad1_both_R - rad0_both_R)
-            denominator_R = np.maximum(denominator_R, eps)
-            new_radiance_R = (radiance_R - factor * rad0_both_R) / denominator_R
-            
+        if use_reflectance:
+            # 반사도 도메인에서 역연산 수행
+            rho_mix_B = src[:, :, 0].astype(np.float32) / 255.0
+            rho_mix_G = src[:, :, 1].astype(np.float32) / 255.0
+            rho_mix_R = src[:, :, 2].astype(np.float32) / 255.0
             if channels == 4:
-                denominator_NIR = (1 - factor) + (factor / baseNIR) * (rad1_both_NIR - rad0_both_NIR)
-                denominator_NIR = np.maximum(denominator_NIR, eps)
-                new_radiance_NIR = (radiance_NIR - factor * rad0_both_NIR) / denominator_NIR
+                rho_mix_NIR = src[:, :, 3].astype(np.float32) / 255.0
 
-        elif haze and not rayleigh:
-            denominator_B = (1 - factor) + (factor / baseB) * ((rad1_both_B - rad0_both_B) - (rad1_rayleigh_B - rad0_rayleigh_B))
-            denominator_B = np.maximum(denominator_B, eps)
-            new_radiance_B = (radiance_B - factor * (rad0_both_B - rad0_rayleigh_B)) / denominator_B
-
-            denominator_G = (1 - factor) + (factor / baseG) * ((rad1_both_G - rad0_both_G) - (rad1_rayleigh_G - rad0_rayleigh_G))
-            denominator_G = np.maximum(denominator_G, eps)
-            new_radiance_G = (radiance_G - factor * (rad0_both_G - rad0_rayleigh_G)) / denominator_G
-
-            denominator_R = (1 - factor) + (factor / baseR) * ((rad1_both_R - rad0_both_R) - (rad1_rayleigh_R - rad0_rayleigh_R))
-            denominator_R = np.maximum(denominator_R, eps)
-            new_radiance_R = (radiance_R - factor * (rad0_both_R - rad0_rayleigh_R)) / denominator_R
-            
+            # Py6S radiance를 반사도 단위로 변환
+            d_both_B = (rad1_both_B - rad0_both_B) / baseB; c_both_B = (rad0_both_B / baseB)
+            d_both_G = (rad1_both_G - rad0_both_G) / baseG; c_both_G = (rad0_both_G / baseG)
+            d_both_R = (rad1_both_R - rad0_both_R) / baseR; c_both_R = (rad0_both_R / baseR)
             if channels == 4:
-                denominator_NIR = (1 - factor) + (factor / baseNIR) * ((rad1_both_NIR - rad0_both_NIR) - (rad1_rayleigh_NIR - rad0_rayleigh_NIR))
-                denominator_NIR = np.maximum(denominator_NIR, eps)
-                new_radiance_NIR = (radiance_NIR - factor * (rad0_both_NIR - rad0_rayleigh_NIR)) / denominator_NIR
+                d_both_NIR = (rad1_both_NIR - rad0_both_NIR) / baseNIR; c_both_NIR = (rad0_both_NIR / baseNIR)
 
-        elif not haze and rayleigh:
-            denominator_B = (1 - factor) + (factor / baseB) * (rad1_rayleigh_B - rad0_rayleigh_B)
-            denominator_B = np.maximum(denominator_B, eps)
-            new_radiance_B = (radiance_B - factor * rad0_rayleigh_B) / denominator_B
-
-            denominator_G = (1 - factor) + (factor / baseG) * (rad1_rayleigh_G - rad0_rayleigh_G)
-            denominator_G = np.maximum(denominator_G, eps)
-            new_radiance_G = (radiance_G - factor * rad0_rayleigh_G) / denominator_G
-
-            denominator_R = (1 - factor) + (factor / baseR) * (rad1_rayleigh_R - rad0_rayleigh_R)
-            denominator_R = np.maximum(denominator_R, eps)
-            new_radiance_R = (radiance_R - factor * rad0_rayleigh_R) / denominator_R
-            
+            d_ray_B = (rad1_rayleigh_B - rad0_rayleigh_B) / baseB; c_ray_B = (rad0_rayleigh_B / baseB)
+            d_ray_G = (rad1_rayleigh_G - rad0_rayleigh_G) / baseG; c_ray_G = (rad0_rayleigh_G / baseG)
+            d_ray_R = (rad1_rayleigh_R - rad0_rayleigh_R) / baseR; c_ray_R = (rad0_rayleigh_R / baseR)
             if channels == 4:
-                denominator_NIR = (1 - factor) + (factor / baseNIR) * (rad1_rayleigh_NIR - rad0_rayleigh_NIR)
-                denominator_NIR = np.maximum(denominator_NIR, eps)
-                new_radiance_NIR = (radiance_NIR - factor * rad0_rayleigh_NIR) / denominator_NIR
+                d_ray_NIR = (rad1_rayleigh_NIR - rad0_rayleigh_NIR) / baseNIR; c_ray_NIR = (rad0_rayleigh_NIR / baseNIR)
+
+            if haze and rayleigh:
+                den_B = np.maximum((1 - factor) + factor * d_both_B, eps)
+                den_G = np.maximum((1 - factor) + factor * d_both_G, eps)
+                den_R = np.maximum((1 - factor) + factor * d_both_R, eps)
+                rho_src_B = (rho_mix_B - factor * c_both_B) / den_B
+                rho_src_G = (rho_mix_G - factor * c_both_G) / den_G
+                rho_src_R = (rho_mix_R - factor * c_both_R) / den_R
+                if channels == 4:
+                    den_NIR = np.maximum((1 - factor) + factor * d_both_NIR, eps)
+                    rho_src_NIR = (rho_mix_NIR - factor * c_both_NIR) / den_NIR
+            elif haze and not rayleigh:
+                den_B = np.maximum((1 - factor) + factor * (d_both_B - d_ray_B), eps)
+                den_G = np.maximum((1 - factor) + factor * (d_both_G - d_ray_G), eps)
+                den_R = np.maximum((1 - factor) + factor * (d_both_R - d_ray_R), eps)
+                rho_src_B = (rho_mix_B - factor * (c_both_B - c_ray_B)) / den_B
+                rho_src_G = (rho_mix_G - factor * (c_both_G - c_ray_G)) / den_G
+                rho_src_R = (rho_mix_R - factor * (c_both_R - c_ray_R)) / den_R
+                if channels == 4:
+                    den_NIR = np.maximum((1 - factor) + factor * (d_both_NIR - d_ray_NIR), eps)
+                    rho_src_NIR = (rho_mix_NIR - factor * (c_both_NIR - c_ray_NIR)) / den_NIR
+            elif (not haze) and rayleigh:
+                den_B = np.maximum((1 - factor) + factor * d_ray_B, eps)
+                den_G = np.maximum((1 - factor) + factor * d_ray_G, eps)
+                den_R = np.maximum((1 - factor) + factor * d_ray_R, eps)
+                rho_src_B = (rho_mix_B - factor * c_ray_B) / den_B
+                rho_src_G = (rho_mix_G - factor * c_ray_G) / den_G
+                rho_src_R = (rho_mix_R - factor * c_ray_R) / den_R
+                if channels == 4:
+                    den_NIR = np.maximum((1 - factor) + factor * d_ray_NIR, eps)
+                    rho_src_NIR = (rho_mix_NIR - factor * c_ray_NIR) / den_NIR
+            else:
+                # haze=False, rayleigh=False 인 경우: 변화 없음 (혼합/역혼합 항 모두 항등)
+                rho_src_B = rho_mix_B
+                rho_src_G = rho_mix_G
+                rho_src_R = rho_mix_R
+                if channels == 4:
+                    rho_src_NIR = rho_mix_NIR
+
+            # 물리 범위 보장: 역복원된 반사도 0~1로 클램프 후 DN 변환
+            rho_src_B = np.clip(rho_src_B, 0.0, 1.0)
+            rho_src_G = np.clip(rho_src_G, 0.0, 1.0)
+            rho_src_R = np.clip(rho_src_R, 0.0, 1.0)
+            atmospheric_noise_image[:, :, 0] = np.clip(rho_src_B * 255.0, 0, 255).astype(np.uint8)
+            atmospheric_noise_image[:, :, 1] = np.clip(rho_src_G * 255.0, 0, 255).astype(np.uint8)
+            atmospheric_noise_image[:, :, 2] = np.clip(rho_src_R * 255.0, 0, 255).astype(np.uint8)
+            if channels == 4:
+                rho_src_NIR = np.clip(rho_src_NIR, 0.0, 1.0)
+                atmospheric_noise_image[:, :, 3] = np.clip(rho_src_NIR * 255.0, 0, 255).astype(np.uint8)
+        else:
+            if haze and rayleigh:
+                denominator_B = (1 - factor) + (factor / baseB) * (rad1_both_B - rad0_both_B)
+                denominator_B = np.maximum(denominator_B, eps)
+                new_radiance_B = (radiance_B - factor * rad0_both_B) / denominator_B
+
+                denominator_G = (1 - factor) + (factor / baseG) * (rad1_both_G - rad0_both_G)
+                denominator_G = np.maximum(denominator_G, eps)
+                new_radiance_G = (radiance_G - factor * rad0_both_G) / denominator_G
+
+                denominator_R = (1 - factor) + (factor / baseR) * (rad1_both_R - rad0_both_R)
+                denominator_R = np.maximum(denominator_R, eps)
+                new_radiance_R = (radiance_R - factor * rad0_both_R) / denominator_R
+                
+                if channels == 4:
+                    denominator_NIR = (1 - factor) + (factor / baseNIR) * (rad1_both_NIR - rad0_both_NIR)
+                    denominator_NIR = np.maximum(denominator_NIR, eps)
+                    new_radiance_NIR = (radiance_NIR - factor * rad0_both_NIR) / denominator_NIR
+
+            elif haze and not rayleigh:
+                denominator_B = (1 - factor) + (factor / baseB) * ((rad1_both_B - rad0_both_B) - (rad1_rayleigh_B - rad0_rayleigh_B))
+                denominator_B = np.maximum(denominator_B, eps)
+                new_radiance_B = (radiance_B - factor * (rad0_both_B - rad0_rayleigh_B)) / denominator_B
+
+                denominator_G = (1 - factor) + (factor / baseG) * ((rad1_both_G - rad0_both_G) - (rad1_rayleigh_G - rad0_rayleigh_G))
+                denominator_G = np.maximum(denominator_G, eps)
+                new_radiance_G = (radiance_G - factor * (rad0_both_G - rad0_rayleigh_G)) / denominator_G
+
+                denominator_R = (1 - factor) + (factor / baseR) * ((rad1_both_R - rad0_both_R) - (rad1_rayleigh_R - rad0_rayleigh_R))
+                denominator_R = np.maximum(denominator_R, eps)
+                new_radiance_R = (radiance_R - factor * (rad0_both_R - rad0_rayleigh_R)) / denominator_R
+                
+                if channels == 4:
+                    denominator_NIR = (1 - factor) + (factor / baseNIR) * ((rad1_both_NIR - rad0_both_NIR) - (rad1_rayleigh_NIR - rad0_rayleigh_NIR))
+                    denominator_NIR = np.maximum(denominator_NIR, eps)
+                    new_radiance_NIR = (radiance_NIR - factor * (rad0_both_NIR - rad0_rayleigh_NIR)) / denominator_NIR
+
+            elif not haze and rayleigh:
+                denominator_B = (1 - factor) + (factor / baseB) * (rad1_rayleigh_B - rad0_rayleigh_B)
+                denominator_B = np.maximum(denominator_B, eps)
+                new_radiance_B = (radiance_B - factor * rad0_rayleigh_B) / denominator_B
+
+                denominator_G = (1 - factor) + (factor / baseG) * (rad1_rayleigh_G - rad0_rayleigh_G)
+                denominator_G = np.maximum(denominator_G, eps)
+                new_radiance_G = (radiance_G - factor * rad0_rayleigh_G) / denominator_G
+
+                denominator_R = (1 - factor) + (factor / baseR) * (rad1_rayleigh_R - rad0_rayleigh_R)
+                denominator_R = np.maximum(denominator_R, eps)
+                new_radiance_R = (radiance_R - factor * rad0_rayleigh_R) / denominator_R
+                
+                if channels == 4:
+                    denominator_NIR = (1 - factor) + (factor / baseNIR) * (rad1_rayleigh_NIR - rad0_rayleigh_NIR)
+                    denominator_NIR = np.maximum(denominator_NIR, eps)
+                    new_radiance_NIR = (radiance_NIR - factor * rad0_rayleigh_NIR) / denominator_NIR
 
 
-        # radiance -> DN 변환 후 0~255 범위 내의 값이 되도록 clipping 수행
-        atmospheric_noise_image[:, :, 0] = np.clip(radiance2DN(new_radiance_B, gain_B, offset_B),
-                                                    0, 255)
-        atmospheric_noise_image[:, :, 1] = np.clip(radiance2DN(new_radiance_G, gain_G, offset_G),
-                                                   0, 255)
-        atmospheric_noise_image[:, :, 2] = np.clip(radiance2DN(new_radiance_R, gain_R, offset_R),
-                                                   0, 255)
-        if channels == 4:
-            atmospheric_noise_image[:, :, 3] = np.clip(radiance2DN(new_radiance_NIR, gain_NIR, offset_NIR),
-                                                       0, 255)
+            # radiance -> DN 변환 후 0~255 범위 내의 값이 되도록 clipping 수행, uint8로 명시 변환
+            atmospheric_noise_image[:, :, 0] = np.clip(
+                radiance2DN(new_radiance_B, gain_B, offset_B), 0, 255
+            ).astype(np.uint8)
+            atmospheric_noise_image[:, :, 1] = np.clip(
+                radiance2DN(new_radiance_G, gain_G, offset_G), 0, 255
+            ).astype(np.uint8)
+            atmospheric_noise_image[:, :, 2] = np.clip(
+                radiance2DN(new_radiance_R, gain_R, offset_R), 0, 255
+            ).astype(np.uint8)
+            if channels == 4:
+                atmospheric_noise_image[:, :, 3] = np.clip(
+                    radiance2DN(new_radiance_NIR, gain_NIR, offset_NIR), 0, 255
+                ).astype(np.uint8)
 
         return atmospheric_noise_image
